@@ -1,0 +1,605 @@
+{% extends "base.html" %}
+
+{% block title %}View Application - Job Tracker{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <span>👁️ Application Details</span>
+            <span class="app-status 
+                {% if application.status == 'Applied' %}status-applied
+                {% elif application.status == 'Phone Screen' or 'Interview' in application.status %}status-interview
+                {% elif application.status == 'Offer Received' %}status-offer
+                {% elif application.status == 'Rejected' %}status-rejected
+                {% else %}status-applied{% endif %}">
+                {{ application.status }}
+            </span>
+        </div>
+    </div>
+    
+    <div style="line-height: 2;">
+        <p><strong>Company:</strong> {{ application.company_name }}</p>
+        <p><strong>Job Title:</strong> {{ application.job_title }}</p>
+        
+        {% if application.location %}
+        <p><strong>Location:</strong> 📍 {{ application.location }}</p>
+        {% endif %}
+        
+        <p><strong>Date Applied:</strong> 📅 {{ application.date_applied }}</p>
+        
+        {% if application.salary_range %}
+        <p><strong>Salary Range:</strong> 💰 {{ application.salary_range }}</p>
+        {% endif %}
+        
+        {% if application.job_match %}
+        <p><strong>Job Match:</strong> 
+            <span class="stars" style="color: #FFC107;">
+                {% for i in range(application.job_match) %}⭐{% endfor %}
+            </span>
+            ({{ application.job_match }}/5)
+        </p>
+        {% endif %}
+        
+        {% if application.job_link %}
+        <p><strong>Job Link:</strong> <a href="{{ application.job_link }}" target="_blank" style="color: var(--primary-color);">🔗 View Job Posting</a></p>
+        {% endif %}
+        
+        {% if application.contact_person %}
+        <p><strong>Contact Person:</strong> 👤 {{ application.contact_person }}</p>
+        {% endif %}
+        
+        {% if application.contact_email %}
+        <p><strong>Contact Email:</strong> 📧 <a href="mailto:{{ application.contact_email }}" style="color: var(--primary-color);">{{ application.contact_email }}</a></p>
+        {% endif %}
+        
+        {% if application.notes %}
+        <div style="margin-top: 1rem; padding: 1rem; background: #f9f9f9; border-radius: 5px;">
+            <strong>Notes:</strong>
+            <p style="margin-top: 0.5rem; white-space: pre-wrap;">{{ application.notes }}</p>
+        </div>
+        {% endif %}
+        
+        <p style="font-size: 0.9rem; color: #999; margin-top: 1rem;"><strong>Last Updated:</strong> {{ application.last_updated }}</p>
+    </div>
+    
+    <div class="btn-group mt-2">
+        <a href="{{ url_for('edit_application', id=application.id) }}" class="btn btn-success">✏️ Edit</a>
+        <a href="{{ url_for('delete_application', id=application.id) }}" 
+           class="btn btn-danger"
+           onclick="return confirm('Are you sure you want to delete this application?')">🗑️ Delete</a>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">◀️ Back to List</a>
+    </div>
+</div>
+{% endblock %}
+
+{% extends "base.html" %}
+
+{% block title %}Statistics - Job Tracker{% endblock %}
+
+{% block content %}
+<!-- Overview Stats -->
+<div class="card">
+    <div class="card-header">📊 Application Statistics</div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ total }}</div>
+            <div class="stat-label">Total Applications</div>
+        </div>
+        
+        {% for status, count in status_counts.items() %}
+        <div class="stat-card">
+            <div class="stat-number">{{ count }}</div>
+            <div class="stat-label">{{ status }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Match Rating Distribution -->
+{% if match_counts %}
+<div class="card">
+    <div class="card-header">⭐ Job Match Ratings</div>
+    
+    <div style="display: grid; gap: 1rem;">
+        {% for rating, count in match_counts.items() %}
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="min-width: 150px; font-weight: 500;">
+                <span class="stars" style="color: #FFC107;">
+                    {% for i in range(rating) %}⭐{% endfor %}
+                </span>
+                ({{ rating }}/5)
+            </div>
+            <div style="flex: 1; background: #f0f0f0; border-radius: 10px; height: 30px; position: relative; overflow: hidden;">
+                <div style="width: {{ (count / total * 100)|round(1) }}%; background: var(--primary-color); height: 100%; border-radius: 10px; transition: width 0.3s;"></div>
+            </div>
+            <div style="min-width: 80px; text-align: right;">
+                <strong>{{ count }}</strong> ({{ (count / total * 100)|round(1) }}%)
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Applications -->
+{% if recent %}
+<div class="card">
+    <div class="card-header">🕒 Recent Applications</div>
+    
+    <div style="display: grid; gap: 1rem;">
+        {% for app in recent %}
+        <div style="padding: 1rem; background: #f9f9f9; border-radius: 5px; border-left: 4px solid var(--primary-color);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                <div>
+                    <strong style="font-size: 1.1rem;">{{ app.company_name }}</strong>
+                    <div style="color: #666;">{{ app.job_title }}</div>
+                </div>
+                <span class="app-status 
+                    {% if app.status == 'Applied' %}status-applied
+                    {% elif app.status == 'Phone Screen' or 'Interview' in app.status %}status-interview
+                    {% elif app.status == 'Offer Received' %}status-offer
+                    {% elif app.status == 'Rejected' %}status-rejected
+                    {% else %}status-applied{% endif %}">
+                    {{ app.status }}
+                </span>
+            </div>
+            <div style="font-size: 0.9rem; color: #666;">
+                📅 {{ app.date_applied }}
+                {% if app.job_match %}
+                | <span class="stars" style="color: #FFC107;">{% for i in range(app.job_match) %}⭐{% endfor %}</span> ({{ app.job_match }})
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Insights -->
+<div class="card">
+    <div class="card-header">💡 Quick Insights</div>
+    
+    <div style="line-height: 2;">
+        {% set response_rate = ((status_counts.get('Phone Screen', 0) + status_counts.get('First Interview', 0) + status_counts.get('Second Interview', 0) + status_counts.get('Third Interview', 0) + status_counts.get('Final Interview', 0) + status_counts.get('Offer Received', 0)) / total * 100) if total > 0 else 0 %}
+        <p>📞 <strong>Response Rate:</strong> {{ response_rate|round(1) }}% 
+           ({{ status_counts.get('Phone Screen', 0) + status_counts.get('First Interview', 0) + status_counts.get('Second Interview', 0) + status_counts.get('Third Interview', 0) + status_counts.get('Final Interview', 0) + status_counts.get('Offer Received', 0) }} out of {{ total }})</p>
+        
+        {% set interview_rate = ((status_counts.get('First Interview', 0) + status_counts.get('Second Interview', 0) + status_counts.get('Third Interview', 0) + status_counts.get('Final Interview', 0) + status_counts.get('Offer Received', 0)) / total * 100) if total > 0 else 0 %}
+        <p>💼 <strong>Interview Rate:</strong> {{ interview_rate|round(1) }}%
+           ({{ status_counts.get('First Interview', 0) + status_counts.get('Second Interview', 0) + status_counts.get('Third Interview', 0) + status_counts.get('Final Interview', 0) + status_counts.get('Offer Received', 0) }} out of {{ total }})</p>
+        
+        {% set offer_rate = ((status_counts.get('Offer Received', 0) / total * 100)) if total > 0 else 0 %}
+        <p>🎉 <strong>Offer Rate:</strong> {{ offer_rate|round(1) }}%
+           ({{ status_counts.get('Offer Received', 0) }} out of {{ total }})</p>
+        
+        {% set rejection_rate = ((status_counts.get('Rejected', 0) / total * 100)) if total > 0 else 0 %}
+        <p>❌ <strong>Rejection Rate:</strong> {{ rejection_rate|round(1) }}%
+           ({{ status_counts.get('Rejected', 0) }} out of {{ total }})</p>
+    </div>
+</div>
+
+<!-- Back Button -->
+<div class="text-center mt-2">
+    <a href="{{ url_for('index') }}" class="btn btn-primary">◀️ Back to Applications</a>
+</div>
+{% endblock %}
+
+{% extends "base.html" %}
+
+{% block title %}Login - Job Tracker{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <h1>📊 Job Tracker</h1>
+            <p>Track your job applications from anywhere</p>
+        </div>
+        
+        <form method="POST">
+            <div class="form-group">
+                <label class="form-label" for="username">Username</label>
+                <input type="text" id="username" name="username" class="form-input" required autofocus>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input type="password" id="password" name="password" class="form-input" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">🔐 Login</button>
+        </form>
+        
+        <div class="mt-2 text-center" style="font-size: 0.9rem; color: #666;">
+            <p><strong>Default credentials:</strong></p>
+            <p>Username: <code>admin</code></p>
+            <p>Password: <code>admin</code></p>
+            <p style="margin-top: 1rem; font-size: 0.8rem; color: #999;">
+                ⚠️ Change your password after first login for security
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% extends "base.html" %}
+
+{% block title %}Applications - Job Tracker{% endblock %}
+
+{% block content %}
+<!-- Stats Dashboard -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-number">{{ total }}</div>
+        <div class="stat-label">Total Applications</div>
+    </div>
+    {% for status, count in status_counts.items() %}
+    <div class="stat-card">
+        <div class="stat-number">{{ count }}</div>
+        <div class="stat-label">{{ status }}</div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Search and Filter -->
+<div class="filter-section">
+    <form method="GET" action="{{ url_for('index') }}">
+        <div class="filter-row">
+            <input type="text" 
+                   name="search" 
+                   class="form-input" 
+                   placeholder="🔍 Search company, title, location..." 
+                   value="{{ search }}"
+                   style="flex: 1;">
+            
+            <select name="status" class="form-select" onchange="this.form.submit()" style="flex: 0 0 150px;">
+                <option value="All" {% if status_filter == 'All' %}selected{% endif %}>All Status</option>
+                <option value="Applied" {% if status_filter == 'Applied' %}selected{% endif %}>Applied</option>
+                <option value="Phone Screen" {% if status_filter == 'Phone Screen' %}selected{% endif %}>Phone Screen</option>
+                <option value="First Interview" {% if status_filter == 'First Interview' %}selected{% endif %}>First Interview</option>
+                <option value="Second Interview" {% if status_filter == 'Second Interview' %}selected{% endif %}>Second Interview</option>
+                <option value="Third Interview" {% if status_filter == 'Third Interview' %}selected{% endif %}>Third Interview</option>
+                <option value="Final Interview" {% if status_filter == 'Final Interview' %}selected{% endif %}>Final Interview</option>
+                <option value="Offer Received" {% if status_filter == 'Offer Received' %}selected{% endif %}>Offer Received</option>
+                <option value="Rejected" {% if status_filter == 'Rejected' %}selected{% endif %}>Rejected</option>
+                <option value="Ghosted" {% if status_filter == 'Ghosted' %}selected{% endif %}>Ghosted</option>
+                <option value="Withdrawn" {% if status_filter == 'Withdrawn' %}selected{% endif %}>Withdrawn</option>
+            </select>
+        </div>
+    </form>
+</div>
+
+<!-- Quick Actions -->
+<div class="card">
+    <div class="btn-group">
+        <a href="{{ url_for('add_application') }}" class="btn btn-success">➕ Add Application</a>
+        <a href="{{ url_for('export_csv') }}" class="btn btn-primary">💾 Export CSV</a>
+    </div>
+</div>
+
+<!-- Applications List -->
+{% if applications %}
+<div class="app-list">
+    {% for app in applications %}
+    <div class="app-item">
+        <div class="app-header">
+            <div>
+                <div class="app-company">{{ app.company_name }}</div>
+                <div class="app-title">{{ app.job_title }}</div>
+            </div>
+            <span class="app-status 
+                {% if app.status == 'Applied' %}status-applied
+                {% elif app.status == 'Phone Screen' or 'Interview' in app.status %}status-interview
+                {% elif app.status == 'Offer Received' %}status-offer
+                {% elif app.status == 'Rejected' %}status-rejected
+                {% else %}status-applied{% endif %}">
+                {{ app.status }}
+            </span>
+        </div>
+        
+        <div class="app-meta">
+            {% if app.location %}
+            <span>📍 {{ app.location }}</span>
+            {% endif %}
+            <span>📅 {{ app.date_applied }}</span>
+            {% if app.job_match %}
+            <span class="app-match">
+                <span class="stars">
+                    {% for i in range(app.job_match) %}⭐{% endfor %}
+                </span>
+                ({{ app.job_match }})
+            </span>
+            {% endif %}
+        </div>
+        
+        {% if app.notes %}
+        <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">
+            {{ app.notes[:100] }}{% if app.notes|length > 100 %}...{% endif %}
+        </div>
+        {% endif %}
+        
+        <div class="app-actions">
+            <a href="{{ url_for('view_application', id=app.id) }}" class="btn btn-primary btn-sm">👁️ View</a>
+            <a href="{{ url_for('edit_application', id=app.id) }}" class="btn btn-success btn-sm">✏️ Edit</a>
+            <a href="{{ url_for('delete_application', id=app.id) }}" 
+               class="btn btn-danger btn-sm"
+               onclick="return confirm('Are you sure you want to delete this application?')">🗑️ Delete</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card text-center">
+    <p style="font-size: 3rem; margin-bottom: 1rem;">📋</p>
+    <h2>No Applications Found</h2>
+    <p style="color: #666; margin: 1rem 0;">Start tracking your job search by adding your first application!</p>
+    <a href="{{ url_for('add_application') }}" class="btn btn-success">➕ Add Your First Application</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% extends "base.html" %}
+
+{% block title %}Edit Application - Job Tracker{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">✏️ Edit Application</div>
+    
+    <form method="POST">
+        <div class="form-group">
+            <label class="form-label" for="company_name">Company Name *</label>
+            <input type="text" id="company_name" name="company_name" class="form-input" 
+                   value="{{ application.company_name }}" required>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="job_title">Job Title *</label>
+            <input type="text" id="job_title" name="job_title" class="form-input" 
+                   value="{{ application.job_title }}" required>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="location">Location</label>
+            <input type="text" id="location" name="location" class="form-input" 
+                   value="{{ application.location or '' }}">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="date_applied">Date Applied</label>
+            <input type="text" id="date_applied" name="date_applied" class="form-input" 
+                   value="{{ application.date_applied }}">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="status">Status</label>
+            <select id="status" name="status" class="form-select">
+                <option value="Applied" {% if application.status == 'Applied' %}selected{% endif %}>Applied</option>
+                <option value="Phone Screen" {% if application.status == 'Phone Screen' %}selected{% endif %}>Phone Screen</option>
+                <option value="First Interview" {% if application.status == 'First Interview' %}selected{% endif %}>First Interview</option>
+                <option value="Second Interview" {% if application.status == 'Second Interview' %}selected{% endif %}>Second Interview</option>
+                <option value="Third Interview" {% if application.status == 'Third Interview' %}selected{% endif %}>Third Interview</option>
+                <option value="Final Interview" {% if application.status == 'Final Interview' %}selected{% endif %}>Final Interview</option>
+                <option value="Offer Received" {% if application.status == 'Offer Received' %}selected{% endif %}>Offer Received</option>
+                <option value="Rejected" {% if application.status == 'Rejected' %}selected{% endif %}>Rejected</option>
+                <option value="Ghosted" {% if application.status == 'Ghosted' %}selected{% endif %}>Ghosted</option>
+                <option value="Withdrawn" {% if application.status == 'Withdrawn' %}selected{% endif %}>Withdrawn</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="salary_range">Salary Range</label>
+            <input type="text" id="salary_range" name="salary_range" class="form-input" 
+                   value="{{ application.salary_range or '' }}">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="job_link">Job Link</label>
+            <input type="url" id="job_link" name="job_link" class="form-input" 
+                   value="{{ application.job_link or '' }}">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="contact_person">Contact Person</label>
+            <input type="text" id="contact_person" name="contact_person" class="form-input" 
+                   value="{{ application.contact_person or '' }}">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="contact_email">Contact Email</label>
+            <input type="email" id="contact_email" name="contact_email" class="form-input" 
+                   value="{{ application.contact_email or '' }}">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="job_match">Job Match (1-5)</label>
+            <select id="job_match" name="job_match" class="form-select">
+                <option value="" {% if not application.job_match %}selected{% endif %}>Not rated</option>
+                <option value="1" {% if application.job_match == 1 %}selected{% endif %}>⭐ 1 - Poor match</option>
+                <option value="2" {% if application.job_match == 2 %}selected{% endif %}>⭐⭐ 2 - Possible match</option>
+                <option value="3" {% if application.job_match == 3 %}selected{% endif %}>⭐⭐⭐ 3 - Good match</option>
+                <option value="4" {% if application.job_match == 4 %}selected{% endif %}>⭐⭐⭐⭐ 4 - Great match</option>
+                <option value="5" {% if application.job_match == 5 %}selected{% endif %}>⭐⭐⭐⭐⭐ 5 - Perfect match</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="notes">Notes</label>
+            <textarea id="notes" name="notes" class="form-textarea">{{ application.notes or '' }}</textarea>
+        </div>
+        
+        <div class="btn-group">
+            <button type="submit" class="btn btn-success">💾 Update Application</button>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">❌ Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>{% block title %}Job Application Tracker{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('index') }}" class="nav-brand">📊 Job Tracker</a>
+            {% if session.user_id %}
+            <div class="nav-menu">
+                <a href="{{ url_for('index') }}" class="nav-link">📋 Applications</a>
+                <a href="{{ url_for('add_application') }}" class="nav-link">➕ Add</a>
+                <a href="{{ url_for('stats') }}" class="nav-link">📈 Stats</a>
+                <a href="{{ url_for('logout') }}" class="nav-link">🚪 Logout</a>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">
+                        {{ message }}
+                        <span class="flash-close" onclick="this.parentElement.style.display='none'">&times;</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 Job Application Tracker | Made with ❤️</p>
+    </footer>
+
+    <script>
+        // Auto-hide flash messages after 5 seconds
+        setTimeout(function() {
+            const flashes = document.querySelectorAll('.flash');
+            flashes.forEach(flash => {
+                flash.style.opacity = '0';
+                setTimeout(() => flash.remove(), 300);
+            });
+        }, 5000);
+    </script>
+</body>
+</html>
+
+{% extends "base.html" %}
+
+{% block title %}Add Application - Job Tracker{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">➕ Add New Application</div>
+    
+    <form method="POST">
+        <div class="form-group">
+            <label class="form-label" for="company_name">Company Name *</label>
+            <input type="text" id="company_name" name="company_name" class="form-input" required>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="job_title">Job Title *</label>
+            <input type="text" id="job_title" name="job_title" class="form-input" required>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="location">Location</label>
+            <input type="text" id="location" name="location" class="form-input" placeholder="Tel Aviv, Remote, etc.">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="date_applied">Date Applied</label>
+            <input type="text" id="date_applied" name="date_applied" class="form-input" 
+                   value="{{ now }}" placeholder="DD/MM/YYYY">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="status">Status</label>
+            <select id="status" name="status" class="form-select">
+                <option value="Applied" selected>Applied</option>
+                <option value="Phone Screen">Phone Screen</option>
+                <option value="First Interview">First Interview</option>
+                <option value="Second Interview">Second Interview</option>
+                <option value="Third Interview">Third Interview</option>
+                <option value="Final Interview">Final Interview</option>
+                <option value="Offer Received">Offer Received</option>
+                <option value="Rejected">Rejected</option>
+                <option value="Ghosted">Ghosted</option>
+                <option value="Withdrawn">Withdrawn</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="salary_range">Salary Range</label>
+            <input type="text" id="salary_range" name="salary_range" class="form-input" 
+                   placeholder="e.g., 30,000-40,000">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="job_link">Job Link</label>
+            <input type="url" id="job_link" name="job_link" class="form-input" 
+                   placeholder="https://...">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="contact_person">Contact Person</label>
+            <input type="text" id="contact_person" name="contact_person" class="form-input">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="contact_email">Contact Email</label>
+            <input type="email" id="contact_email" name="contact_email" class="form-input">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="job_match">Job Match (1-5)</label>
+            <select id="job_match" name="job_match" class="form-select">
+                <option value="">Not rated</option>
+                <option value="1">⭐ 1 - Poor match</option>
+                <option value="2">⭐⭐ 2 - Possible match</option>
+                <option value="3">⭐⭐⭐ 3 - Good match</option>
+                <option value="4">⭐⭐⭐⭐ 4 - Great match</option>
+                <option value="5">⭐⭐⭐⭐⭐ 5 - Perfect match</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="notes">Notes</label>
+            <textarea id="notes" name="notes" class="form-textarea" 
+                      placeholder="Add any notes about this application..."></textarea>
+        </div>
+        
+        <div class="btn-group">
+            <button type="submit" class="btn btn-success">💾 Save Application</button>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">❌ Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Set today's date in DD/MM/YYYY format
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = today.getFullYear();
+    document.getElementById('date_applied').value = `${day}/${month}/${year}`;
+</script>
+{% endblock %}
