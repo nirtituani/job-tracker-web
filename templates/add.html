@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Add Application - Job Tracker{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">➕ Add New Application</div>
+    
+    <form method="POST">
+        <div class="form-group">
+            <label class="form-label" for="company_name">Company Name *</label>
+            <input type="text" id="company_name" name="company_name" class="form-input" required>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="job_title">Job Title *</label>
+            <input type="text" id="job_title" name="job_title" class="form-input" required>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="location">Location</label>
+            <input type="text" id="location" name="location" class="form-input" placeholder="Tel Aviv, Remote, etc.">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="date_applied">Date Applied</label>
+            <input type="text" id="date_applied" name="date_applied" class="form-input" 
+                   value="{{ now }}" placeholder="DD/MM/YYYY">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="status">Status</label>
+            <select id="status" name="status" class="form-select">
+                <option value="Applied" selected>Applied</option>
+                <option value="Phone Screen">Phone Screen</option>
+                <option value="First Interview">First Interview</option>
+                <option value="Second Interview">Second Interview</option>
+                <option value="Third Interview">Third Interview</option>
+                <option value="Final Interview">Final Interview</option>
+                <option value="Offer Received">Offer Received</option>
+                <option value="Rejected">Rejected</option>
+                <option value="Ghosted">Ghosted</option>
+                <option value="Withdrawn">Withdrawn</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="salary_range">Salary Range</label>
+            <input type="text" id="salary_range" name="salary_range" class="form-input" 
+                   placeholder="e.g., 30,000-40,000">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="job_link">Job Link</label>
+            <input type="url" id="job_link" name="job_link" class="form-input" 
+                   placeholder="https://...">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="contact_person">Contact Person</label>
+            <input type="text" id="contact_person" name="contact_person" class="form-input">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="contact_email">Contact Email</label>
+            <input type="email" id="contact_email" name="contact_email" class="form-input">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="job_match">Job Match (1-5)</label>
+            <select id="job_match" name="job_match" class="form-select">
+                <option value="">Not rated</option>
+                <option value="1">⭐ 1 - Poor match</option>
+                <option value="2">⭐⭐ 2 - Possible match</option>
+                <option value="3">⭐⭐⭐ 3 - Good match</option>
+                <option value="4">⭐⭐⭐⭐ 4 - Great match</option>
+                <option value="5">⭐⭐⭐⭐⭐ 5 - Perfect match</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="notes">Notes</label>
+            <textarea id="notes" name="notes" class="form-textarea" 
+                      placeholder="Add any notes about this application..."></textarea>
+        </div>
+        
+        <div class="btn-group">
+            <button type="submit" class="btn btn-success">💾 Save Application</button>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">❌ Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Set today's date in DD/MM/YYYY format
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = today.getFullYear();
+    document.getElementById('date_applied').value = `${day}/${month}/${year}`;
+</script>
+{% endblock %}

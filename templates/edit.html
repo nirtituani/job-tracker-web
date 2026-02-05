@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Application - Job Tracker{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">✏️ Edit Application</div>
+    
+    <form method="POST">
+        <div class="form-group">
+            <label class="form-label" for="company_name">Company Name *</label>
+            <input type="text" id="company_name" name="company_name" class="form-input" 
+                   value="{{ application.company_name }}" required>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="job_title">Job Title *</label>
+            <input type="text" id="job_title" name="job_title" class="form-input" 
+                   value="{{ application.job_title }}" required>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="location">Location</label>
+            <input type="text" id="location" name="location" class="form-input" 
+                   value="{{ application.location or '' }}">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="date_applied">Date Applied</label>
+            <input type="text" id="date_applied" name="date_applied" class="form-input" 
+                   value="{{ application.date_applied }}">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="status">Status</label>
+            <select id="status" name="status" class="form-select">
+                <option value="Applied" {% if application.status == 'Applied' %}selected{% endif %}>Applied</option>
+                <option value="Phone Screen" {% if application.status == 'Phone Screen' %}selected{% endif %}>Phone Screen</option>
+                <option value="First Interview" {% if application.status == 'First Interview' %}selected{% endif %}>First Interview</option>
+                <option value="Second Interview" {% if application.status == 'Second Interview' %}selected{% endif %}>Second Interview</option>
+                <option value="Third Interview" {% if application.status == 'Third Interview' %}selected{% endif %}>Third Interview</option>
+                <option value="Final Interview" {% if application.status == 'Final Interview' %}selected{% endif %}>Final Interview</option>
+                <option value="Offer Received" {% if application.status == 'Offer Received' %}selected{% endif %}>Offer Received</option>
+                <option value="Rejected" {% if application.status == 'Rejected' %}selected{% endif %}>Rejected</option>
+                <option value="Ghosted" {% if application.status == 'Ghosted' %}selected{% endif %}>Ghosted</option>
+                <option value="Withdrawn" {% if application.status == 'Withdrawn' %}selected{% endif %}>Withdrawn</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="salary_range">Salary Range</label>
+            <input type="text" id="salary_range" name="salary_range" class="form-input" 
+                   value="{{ application.salary_range or '' }}">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="job_link">Job Link</label>
+            <input type="url" id="job_link" name="job_link" class="form-input" 
+                   value="{{ application.job_link or '' }}">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="contact_person">Contact Person</label>
+            <input type="text" id="contact_person" name="contact_person" class="form-input" 
+                   value="{{ application.contact_person or '' }}">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="contact_email">Contact Email</label>
+            <input type="email" id="contact_email" name="contact_email" class="form-input" 
+                   value="{{ application.contact_email or '' }}">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="job_match">Job Match (1-5)</label>
+            <select id="job_match" name="job_match" class="form-select">
+                <option value="" {% if not application.job_match %}selected{% endif %}>Not rated</option>
+                <option value="1" {% if application.job_match == 1 %}selected{% endif %}>⭐ 1 - Poor match</option>
+                <option value="2" {% if application.job_match == 2 %}selected{% endif %}>⭐⭐ 2 - Possible match</option>
+                <option value="3" {% if application.job_match == 3 %}selected{% endif %}>⭐⭐⭐ 3 - Good match</option>
+                <option value="4" {% if application.job_match == 4 %}selected{% endif %}>⭐⭐⭐⭐ 4 - Great match</option>
+                <option value="5" {% if application.job_match == 5 %}selected{% endif %}>⭐⭐⭐⭐⭐ 5 - Perfect match</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="notes">Notes</label>
+            <textarea id="notes" name="notes" class="form-textarea">{{ application.notes or '' }}</textarea>
+        </div>
+        
+        <div class="btn-group">
+            <button type="submit" class="btn btn-success">💾 Update Application</button>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">❌ Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

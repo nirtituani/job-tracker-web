@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Statistics - Job Tracker{% endblock %}
+
+{% block content %}
+<!-- Overview Stats -->
+<div class="card">
+    <div class="card-header">📊 Application Statistics</div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ total }}</div>
+            <div class="stat-label">Total Applications</div>
+        </div>
+        
+        {% for status, count in status_counts.items() %}
+        <div class="stat-card">
+            <div class="stat-number">{{ count }}</div>
+            <div class="stat-label">{{ status }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Match Rating Distribution -->
+{% if match_counts %}
+<div class="card">
+    <div class="card-header">⭐ Job Match Ratings</div>
+    
+    <div style="display: grid; gap: 1rem;">
+        {% for rating, count in match_counts.items() %}
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="min-width: 150px; font-weight: 500;">
+                <span class="stars" style="color: #FFC107;">
+                    {% for i in range(rating) %}⭐{% endfor %}
+                </span>
+                ({{ rating }}/5)
+            </div>
+            <div style="flex: 1; background: #f0f0f0; border-radius: 10px; height: 30px; position: relative; overflow: hidden;">
+                <div style="width: {{ (count / total * 100)|round(1) }}%; background: var(--primary-color); height: 100%; border-radius: 10px; transition: width 0.3s;"></div>
+            </div>
+            <div style="min-width: 80px; text-align: right;">
+                <strong>{{ count }}</strong> ({{ (count / total * 100)|round(1) }}%)
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Applications -->
+{% if recent %}
+<div class="card">
+    <div class="card-header">🕒 Recent Applications</div>
+    
+    <div style="display: grid; gap: 1rem;">
+        {% for app in recent %}
+        <div style="padding: 1rem; background: #f9f9f9; border-radius: 5px; border-left: 4px solid var(--primary-color);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                <div>
+                    <strong style="font-size: 1.1rem;">{{ app.company_name }}</strong>
+                    <div style="color: #666;">{{ app.job_title }}</div>
+                </div>
+                <span class="app-status 
+                    {% if app.status == 'Applied' %}status-applied
+                    {% elif app.status == 'Phone Screen' or 'Interview' in app.status %}status-interview
+                    {% elif app.status == 'Offer Received' %}status-offer
+                    {% elif app.status == 'Rejected' %}status-rejected
+                    {% else %}status-applied{% endif %}">
+                    {{ app.status }}
+                </span>
+            </div>
+            <div style="font-size: 0.9rem; color: #666;">
+                📅 {{ app.date_applied }}
+                {% if app.job_match %}
+                | <span class="stars" style="color: #FFC107;">{% for i in range(app.job_match) %}⭐{% endfor %}</span> ({{ app.job_match }})
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Insights -->
+<div class="card">
+    <div class="card-header">💡 Quick Insights</div>
+    
+    <div style="line-height: 2;">
+        {% set response_rate = ((status_counts.get('Phone Screen', 0) + status_counts.get('First Interview', 0) + status_counts.get('Second Interview', 0) + status_counts.get('Third Interview', 0) + status_counts.get('Final Interview', 0) + status_counts.get('Offer Received', 0)) / total * 100) if total > 0 else 0 %}
+        <p>📞 <strong>Response Rate:</strong> {{ response_rate|round(1) }}% 
+           ({{ status_counts.get('Phone Screen', 0) + status_counts.get('First Interview', 0) + status_counts.get('Second Interview', 0) + status_counts.get('Third Interview', 0) + status_counts.get('Final Interview', 0) + status_counts.get('Offer Received', 0) }} out of {{ total }})</p>
+        
+        {% set interview_rate = ((status_counts.get('First Interview', 0) + status_counts.get('Second Interview', 0) + status_counts.get('Third Interview', 0) + status_counts.get('Final Interview', 0) + status_counts.get('Offer Received', 0)) / total * 100) if total > 0 else 0 %}
+        <p>💼 <strong>Interview Rate:</strong> {{ interview_rate|round(1) }}%
+           ({{ status_counts.get('First Interview', 0) + status_counts.get('Second Interview', 0) + status_counts.get('Third Interview', 0) + status_counts.get('Final Interview', 0) + status_counts.get('Offer Received', 0) }} out of {{ total }})</p>
+        
+        {% set offer_rate = ((status_counts.get('Offer Received', 0) / total * 100)) if total > 0 else 0 %}
+        <p>🎉 <strong>Offer Rate:</strong> {{ offer_rate|round(1) }}%
+           ({{ status_counts.get('Offer Received', 0) }} out of {{ total }})</p>
+        
+        {% set rejection_rate = ((status_counts.get('Rejected', 0) / total * 100)) if total > 0 else 0 %}
+        <p>❌ <strong>Rejection Rate:</strong> {{ rejection_rate|round(1) }}%
+           ({{ status_counts.get('Rejected', 0) }} out of {{ total }})</p>
+    </div>
+</div>
+
+<!-- Back Button -->
+<div class="text-center mt-2">
+    <a href="{{ url_for('index') }}" class="btn btn-primary">◀️ Back to Applications</a>
+</div>
+{% endblock %}
