@@ -128,16 +128,25 @@ export default function App() {
   }, [refresh, user]);
 
   const handleSave = async (form) => {
-    if (editData) await updateApplication(editData.id, form);
-    else await addApplication(form);
+    if (editData) {
+      const updated = await updateApplication(editData.id, form);
+      setApps(prev => prev.map(a => a.id === editData.id ? updated : a));
+    } else {
+      const created = await addApplication(form);
+      setApps(prev => [created, ...prev]);
+    }
     setModalOpen(false);
     setEditData(null);
-    refresh();
+    getStats().then(setStats);
   };
 
   const handleEdit = (app) => { setEditData(app); setModalOpen(true); };
   const handleDelete = async (id) => {
-    if (confirm('Delete this application?')) { await deleteApplication(id); refresh(); }
+    if (confirm('Delete this application?')) {
+      await deleteApplication(id);
+      setApps(prev => prev.filter(a => a.id !== id));
+      getStats().then(setStats);
+    }
   };
 
   if (user === undefined) return (

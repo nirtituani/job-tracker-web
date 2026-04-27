@@ -28,8 +28,8 @@ engine = create_engine(
     _db_url,
     pool_size=3,
     max_overflow=5,
-    pool_pre_ping=True,         # validate connection before use
-    pool_recycle=1800,          # recycle connections every 30 min
+    pool_pre_ping=True,         # reconnect transparently on stale connections
+    pool_recycle=240,           # recycle before Supabase's ~5 min idle timeout
     connect_args={"ssl_context": True},
 )
 
@@ -202,13 +202,14 @@ def add_application():
     data = request.json
     now = datetime.now().strftime("%d/%m/%Y %H:%M")
     with engine.connect() as conn:
-        conn.execute(text("""
+        result = conn.execute(text("""
             INSERT INTO applications (user_id, company, title, location, date_applied, status,
             salary_range, job_link, contact_person, contact_email, applied_via,
             match_rating, notes, last_updated)
             VALUES (:uid, :company, :title, :location, :date_applied, :status,
             :salary_range, :job_link, :contact_person, :contact_email, :applied_via,
             :match_rating, :notes, :last_updated)
+            RETURNING *
         """), {
             "uid": uid,
             "company": data.get("company", ""), "title": data.get("title", ""),
@@ -219,8 +220,9 @@ def add_application():
             "match_rating": data.get("match_rating", 0), "notes": data.get("notes", ""),
             "last_updated": now,
         })
+        row = dict(result.mappings().first())
         conn.commit()
-    return jsonify({"message": "Added"}), 201
+    return jsonify(row), 201
 
 @app.route("/api/applications/<int:app_id>", methods=["PUT"])
 @require_login
@@ -229,13 +231,14 @@ def update_application(app_id):
     data = request.json
     now = datetime.now().strftime("%d/%m/%Y %H:%M")
     with engine.connect() as conn:
-        conn.execute(text("""
+        result = conn.execute(text("""
             UPDATE applications SET company=:company, title=:title, location=:location,
             date_applied=:date_applied, status=:status, salary_range=:salary_range,
             job_link=:job_link, contact_person=:contact_person, contact_email=:contact_email,
             applied_via=:applied_via, match_rating=:match_rating, notes=:notes,
             last_updated=:last_updated
             WHERE id=:id AND user_id=:uid
+            RETURNING *
         """), {
             "company": data.get("company"), "title": data.get("title"),
             "location": data.get("location"), "date_applied": data.get("date_applied"),
@@ -245,8 +248,9 @@ def update_application(app_id):
             "match_rating": data.get("match_rating"), "notes": data.get("notes"),
             "last_updated": now, "id": app_id, "uid": uid,
         })
+        row = dict(result.mappings().first())
         conn.commit()
-    return jsonify({"message": "Updated"})
+    return jsonify(row)
 
 @app.route("/api/applications/<int:app_id>", methods=["DELETE"])
 @require_login
