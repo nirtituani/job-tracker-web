@@ -1,9 +1,11 @@
-import os, sqlite3, csv, io
+import os, csv, io
 from functools import wraps
 from datetime import datetime
 from flask import Flask, request, jsonify, send_file, session
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
+import psycopg2
+import psycopg2.extras
 
 app = Flask(__name__,
             static_folder=os.path.join(os.path.dirname(__file__), "static"),
@@ -11,26 +13,26 @@ app = Flask(__name__,
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-in-prod")
 CORS(app, supports_credentials=True)
 
-DB_PATH = os.environ.get("DATABASE_URL", os.path.join(os.path.dirname(__file__), "database.db"))
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    conn = psycopg2.connect(DATABASE_URL)
     return conn
 
 def init_db():
     conn = get_db()
-    conn.execute("""
+    cur = conn.cursor()
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             created_at TEXT DEFAULT ''
         )
     """)
-    conn.execute("""
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS applications (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             user_id INTEGER NOT NULL DEFAULT 0,
             company TEXT NOT NULL,
             title TEXT NOT NULL,
@@ -47,11 +49,8 @@ def init_db():
             last_updated TEXT DEFAULT ''
         )
     """)
-    try:
-        conn.execute("ALTER TABLE applications ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0")
-    except Exception:
-        pass
     conn.commit()
+    cur.close()
     conn.close()
 
 init_db()
@@ -78,19 +77,20 @@ def register():
     if len(password) < 6:
         return jsonify({"error": "Password must be at least 6 characters"}), 400
     conn = get_db()
-    existing = conn.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    existing = cur.execute("SELECT id FROM users WHERE email=%s", (email,)) or cur.fetchone()
     if existing:
-        conn.close()
+        cur.close(); conn.close()
         return jsonify({"error": "Email already registered"}), 409
     password_hash = generate_password_hash(password)
     now = datetime.now().strftime("%d/%m/%Y %H:%M")
-    cursor = conn.execute(
-        "INSERT INTO users (email, password_hash, created_at) VALUES (?, ?, ?)",
+    cur.execute(
+        "INSERT INTO users (email, password_hash, created_at) VALUES (%s, %s, %s) RETURNING id",
         (email, password_hash, now)
     )
+    user_id = cur.fetchone()["id"]
     conn.commit()
-    user_id = cursor.lastrowid
-    conn.close()
+    cur.close(); conn.close()
     session["user_id"] = user_id
     session["email"] = email
     return jsonify({"id": user_id, "email": email}), 201
@@ -101,8 +101,10 @@ def login():
     email = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
     conn = get_db()
-    user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-    conn.close()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("SELECT * FROM users WHERE email=%s", (email,))
+    user = cur.fetchone()
+    cur.close(); conn.close()
     if not user or not check_password_hash(user["password_hash"], password):
         return jsonify({"error": "Invalid email or password"}), 401
     session["user_id"] = user["id"]
@@ -120,26 +122,28 @@ def me():
         return jsonify({"error": "Unauthorized"}), 401
     return jsonify({"id": session["user_id"], "email": session["email"]})
 
-# --- Application routes (all scoped to logged-in user) ---
+# --- Application routes ---
 
 @app.route("/api/applications", methods=["GET"])
 @require_login
 def get_applications():
     uid = session["user_id"]
     conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     status = request.args.get("status", "")
     search = request.args.get("search", "")
-    query = "SELECT * FROM applications WHERE user_id=?"
+    query = "SELECT * FROM applications WHERE user_id=%s"
     params = [uid]
     if status and status != "All":
-        query += " AND status=?"
+        query += " AND status=%s"
         params.append(status)
     if search:
-        query += " AND (company LIKE ? OR title LIKE ? OR location LIKE ?)"
+        query += " AND (company ILIKE %s OR title ILIKE %s OR location ILIKE %s)"
         params.extend([f"%{search}%"] * 3)
     query += " ORDER BY id DESC"
-    rows = conn.execute(query, params).fetchall()
-    conn.close()
+    cur.execute(query, params)
+    rows = cur.fetchall()
+    cur.close(); conn.close()
     return jsonify([dict(r) for r in rows])
 
 @app.route("/api/applications", methods=["POST"])
@@ -148,12 +152,13 @@ def add_application():
     uid = session["user_id"]
     data = request.json
     conn = get_db()
+    cur = conn.cursor()
     now = datetime.now().strftime("%d/%m/%Y %H:%M")
-    conn.execute("""
+    cur.execute("""
         INSERT INTO applications (user_id, company, title, location, date_applied, status,
         salary_range, job_link, contact_person, contact_email, applied_via,
         match_rating, notes, last_updated)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """, (
         uid,
         data.get("company", ""), data.get("title", ""),
@@ -164,7 +169,7 @@ def add_application():
         data.get("match_rating", 0), data.get("notes", ""), now
     ))
     conn.commit()
-    conn.close()
+    cur.close(); conn.close()
     return jsonify({"message": "Added"}), 201
 
 @app.route("/api/applications/<int:app_id>", methods=["PUT"])
@@ -173,12 +178,13 @@ def update_application(app_id):
     uid = session["user_id"]
     data = request.json
     conn = get_db()
+    cur = conn.cursor()
     now = datetime.now().strftime("%d/%m/%Y %H:%M")
-    conn.execute("""
-        UPDATE applications SET company=?, title=?, location=?, date_applied=?,
-        status=?, salary_range=?, job_link=?, contact_person=?, contact_email=?,
-        applied_via=?, match_rating=?, notes=?, last_updated=?
-        WHERE id=? AND user_id=?
+    cur.execute("""
+        UPDATE applications SET company=%s, title=%s, location=%s, date_applied=%s,
+        status=%s, salary_range=%s, job_link=%s, contact_person=%s, contact_email=%s,
+        applied_via=%s, match_rating=%s, notes=%s, last_updated=%s
+        WHERE id=%s AND user_id=%s
     """, (
         data.get("company"), data.get("title"), data.get("location"),
         data.get("date_applied"), data.get("status"), data.get("salary_range"),
@@ -187,7 +193,7 @@ def update_application(app_id):
         now, app_id, uid
     ))
     conn.commit()
-    conn.close()
+    cur.close(); conn.close()
     return jsonify({"message": "Updated"})
 
 @app.route("/api/applications/<int:app_id>", methods=["DELETE"])
@@ -195,9 +201,10 @@ def update_application(app_id):
 def delete_application(app_id):
     uid = session["user_id"]
     conn = get_db()
-    conn.execute("DELETE FROM applications WHERE id=? AND user_id=?", (app_id, uid))
+    cur = conn.cursor()
+    cur.execute("DELETE FROM applications WHERE id=%s AND user_id=%s", (app_id, uid))
     conn.commit()
-    conn.close()
+    cur.close(); conn.close()
     return jsonify({"message": "Deleted"})
 
 @app.route("/api/stats", methods=["GET"])
@@ -205,17 +212,16 @@ def delete_application(app_id):
 def get_stats():
     uid = session["user_id"]
     conn = get_db()
-    total = conn.execute("SELECT COUNT(*) FROM applications WHERE user_id=?", (uid,)).fetchone()[0]
-    active = conn.execute(
-        "SELECT COUNT(*) FROM applications WHERE user_id=? AND status IN ('Applied','Phone Screen','Online Assessment')",
-        (uid,)).fetchone()[0]
-    interviews = conn.execute(
-        "SELECT COUNT(*) FROM applications WHERE user_id=? AND status LIKE '%Interview%'",
-        (uid,)).fetchone()[0]
-    rejected = conn.execute(
-        "SELECT COUNT(*) FROM applications WHERE user_id=? AND status='Rejected'",
-        (uid,)).fetchone()[0]
-    conn.close()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM applications WHERE user_id=%s", (uid,))
+    total = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM applications WHERE user_id=%s AND status IN ('Applied','Phone Screen','Online Assessment')", (uid,))
+    active = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM applications WHERE user_id=%s AND status ILIKE '%%Interview%%'", (uid,))
+    interviews = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM applications WHERE user_id=%s AND status='Rejected'", (uid,))
+    rejected = cur.fetchone()[0]
+    cur.close(); conn.close()
     return jsonify({"total": total, "active": active, "interviews": interviews, "rejected": rejected})
 
 @app.route("/api/export", methods=["GET"])
@@ -223,13 +229,13 @@ def get_stats():
 def export_csv():
     uid = session["user_id"]
     conn = get_db()
-    rows = conn.execute(
-        "SELECT * FROM applications WHERE user_id=? ORDER BY id DESC", (uid,)
-    ).fetchall()
-    conn.close()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM applications WHERE user_id=%s ORDER BY id DESC", (uid,))
+    rows = cur.fetchall()
+    cur.close(); conn.close()
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["ID", "Company", "Job Title", "Location", "Date Applied",
+    writer.writerow(["ID", "User ID", "Company", "Job Title", "Location", "Date Applied",
                      "Status", "Salary Range", "Job Link", "Contact Person",
                      "Contact Email", "Applied Via", "Match", "Notes", "Last Updated"])
     for r in rows:
