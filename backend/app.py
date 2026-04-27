@@ -19,10 +19,10 @@ GOOGLE_REDIRECT_URI = f"{RENDER_EXTERNAL_URL}/api/auth/google/callback"
 
 # Build SQLAlchemy URL with pg8000 dialect (keeps connections pooled)
 _db_url = DATABASE_URL
-if _db_url.startswith("postgres://"):
-    _db_url = "postgresql+pg8000" + _db_url[8:]
-elif _db_url.startswith("postgresql://"):
-    _db_url = "postgresql+pg8000" + _db_url[12:]
+if _db_url.startswith("postgresql://"):
+    _db_url = "postgresql+pg8000://" + _db_url[len("postgresql://"):]
+elif _db_url.startswith("postgres://"):
+    _db_url = "postgresql+pg8000://" + _db_url[len("postgres://"):]
 
 engine = create_engine(
     _db_url,
