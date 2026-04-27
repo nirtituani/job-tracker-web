@@ -2,9 +2,10 @@ import os, csv, io
 from functools import wraps
 from datetime import datetime
 from urllib.parse import urlparse, unquote
-from flask import Flask, request, jsonify, send_file, session
+from flask import Flask, request, jsonify, send_file, session, redirect
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
+from authlib.integrations.flask_client import OAuth
 import pg8000.dbapi as pg8000
 
 STATIC_FOLDER = os.path.join(os.path.dirname(__file__), "static")
@@ -14,6 +15,17 @@ app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-in-prod")
 CORS(app, supports_credentials=True)
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
+RENDER_EXTERNAL_URL = os.environ.get("RENDER_EXTERNAL_URL", "http://localhost:5001")
+GOOGLE_REDIRECT_URI = f"{RENDER_EXTERNAL_URL}/api/auth/google/callback"
+
+oauth = OAuth(app)
+google = oauth.register(
+    name="google",
+    client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+    client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"},
+)
 
 def get_db():
     url = urlparse(DATABASE_URL)
@@ -68,6 +80,9 @@ def init_db():
             last_updated TEXT DEFAULT ''
         )
     """)
+    # Migrations
+    cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT")
+    cur.execute("ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL")
     conn.commit()
     cur.close()
     conn.close()
@@ -140,6 +155,36 @@ def me():
     if "user_id" not in session:
         return jsonify({"error": "Unauthorized"}), 401
     return jsonify({"id": session["user_id"], "email": session["email"]})
+
+@app.route("/api/auth/google")
+def google_login():
+    return google.authorize_redirect(GOOGLE_REDIRECT_URI)
+
+@app.route("/api/auth/google/callback")
+def google_callback():
+    token = google.authorize_access_token()
+    user_info = token.get("userinfo")
+    email = user_info["email"]
+    google_id = user_info["sub"]
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id, email FROM users WHERE google_id=%s OR email=%s", (google_id, email))
+    row = cur.fetchone()
+    if row:
+        user_id = row[0]
+        cur.execute("UPDATE users SET google_id=%s WHERE id=%s AND google_id IS NULL", (google_id, user_id))
+    else:
+        now = datetime.now().strftime("%d/%m/%Y %H:%M")
+        cur.execute(
+            "INSERT INTO users (email, google_id, created_at) VALUES (%s, %s, %s) RETURNING id",
+            (email, google_id, now)
+        )
+        user_id = cur.fetchone()[0]
+    conn.commit()
+    cur.close(); conn.close()
+    session["user_id"] = user_id
+    session["email"] = email
+    return redirect("/")
 
 # --- Application routes ---
 
