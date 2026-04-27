@@ -6,6 +6,12 @@ export async function getMe() {
   return res.json();
 }
 
+export async function getInit() {
+  const res = await fetch('/api/init', { credentials: 'include' });
+  if (res.status === 401) return null;
+  return res.json();
+}
+
 export async function login(email, password) {
   const res = await fetch(`${API}/login`, {
     method: 'POST',

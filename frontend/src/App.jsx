@@ -5,7 +5,7 @@ import ApplicationTable from './components/ApplicationTable';
 import AddApplicationModal from './components/AddApplicationModal';
 import AuthPage from './pages/AuthPage';
 import { getApplications, getStats, addApplication, updateApplication, deleteApplication, exportCsv } from './api/applications';
-import { getMe, logout as apiLogout } from './api/auth';
+import { getMe, getInit, logout as apiLogout } from './api/auth';
 import { useSettings } from './hooks/useSettings';
 import { Plus, X } from 'lucide-react';
 
@@ -110,7 +110,14 @@ export default function App() {
   const [activeView, setActiveView] = useState('Dashboard');
   const { settings, addStatus, removeStatus, addVia, removeVia } = useSettings();
 
-  useEffect(() => { getMe().then(setUser); }, []);
+  useEffect(() => {
+    getInit().then(data => {
+      if (!data) { setUser(null); return; }
+      setUser(data.user);
+      setApps(data.applications);
+      setStats(data.stats);
+    });
+  }, []);
 
   const handleLogout = async () => {
     await apiLogout();
@@ -122,10 +129,6 @@ export default function App() {
     setApps(a);
     setStats(s);
   }, [search, statusFilter]);
-
-  useEffect(() => {
-    if (user) refresh();
-  }, [refresh, user]);
 
   const handleSave = async (form) => {
     if (editData) {
@@ -149,12 +152,17 @@ export default function App() {
     }
   };
 
+  const handleAuth = (u) => {
+    setUser(u);
+    refresh();
+  };
+
   if (user === undefined) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <p className="text-muted-foreground text-sm">Loading...</p>
     </div>
   );
-  if (user === null) return <AuthPage onAuth={setUser} />;
+  if (user === null) return <AuthPage onAuth={handleAuth} />;
 
   const renderMain = () => {
     if (activeView === 'Analytics') return <AnalyticsView stats={stats} apps={apps} />;

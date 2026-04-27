@@ -141,6 +141,32 @@ def me():
         return jsonify({"error": "Unauthorized"}), 401
     return jsonify({"id": session["user_id"], "email": session["email"]})
 
+@app.route("/api/init", methods=["GET"])
+def init_data():
+    """Single endpoint that returns user + applications + stats in one round trip."""
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    uid = session["user_id"]
+    with engine.connect() as conn:
+        apps = [dict(r._mapping) for r in conn.execute(
+            text("SELECT * FROM applications WHERE user_id=:uid ORDER BY id DESC"), {"uid": uid}
+        ).fetchall()]
+        total = conn.execute(text("SELECT COUNT(*) FROM applications WHERE user_id=:uid"), {"uid": uid}).scalar()
+        active = conn.execute(text(
+            "SELECT COUNT(*) FROM applications WHERE user_id=:uid AND status IN ('Applied','Phone Screen','Online Assessment')"
+        ), {"uid": uid}).scalar()
+        interviews = conn.execute(text(
+            "SELECT COUNT(*) FROM applications WHERE user_id=:uid AND status ILIKE :s"
+        ), {"uid": uid, "s": "%Interview%"}).scalar()
+        rejected = conn.execute(text(
+            "SELECT COUNT(*) FROM applications WHERE user_id=:uid AND status='Rejected'"
+        ), {"uid": uid}).scalar()
+    return jsonify({
+        "user": {"id": uid, "email": session["email"]},
+        "applications": apps,
+        "stats": {"total": total, "active": active, "interviews": interviews, "rejected": rejected},
+    })
+
 @app.route("/api/auth/google")
 def google_login():
     return google.authorize_redirect(GOOGLE_REDIRECT_URI)
