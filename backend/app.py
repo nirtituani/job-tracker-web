@@ -200,6 +200,46 @@ def google_callback():
     session["email"] = email
     return redirect("/")
 
+# --- Import route ---
+
+@app.route("/api/import", methods=["POST"])
+@require_login
+def import_applications():
+    uid = session["user_id"]
+    records = request.json  # list of application dicts
+    if not isinstance(records, list):
+        return jsonify({"error": "Expected a list of applications"}), 400
+    now = datetime.now().strftime("%d/%m/%Y %H:%M")
+    inserted = 0
+    with engine.connect() as conn:
+        for r in records:
+            conn.execute(text("""
+                INSERT INTO applications (user_id, company, title, location, date_applied, status,
+                salary_range, job_link, contact_person, contact_email, applied_via,
+                match_rating, notes, last_updated)
+                VALUES (:uid, :company, :title, :location, :date_applied, :status,
+                :salary_range, :job_link, :contact_person, :contact_email, :applied_via,
+                :match_rating, :notes, :last_updated)
+            """), {
+                "uid": uid,
+                "company": r.get("company", ""),
+                "title": r.get("title", ""),
+                "location": r.get("location", ""),
+                "date_applied": r.get("date_applied", ""),
+                "status": r.get("status", "Pre-Applied"),
+                "salary_range": r.get("salary_range", ""),
+                "job_link": r.get("job_link", ""),
+                "contact_person": r.get("contact_person", ""),
+                "contact_email": r.get("contact_email", ""),
+                "applied_via": r.get("applied_via", ""),
+                "match_rating": r.get("match_rating", 0) or 0,
+                "notes": r.get("notes", ""),
+                "last_updated": r.get("last_updated", now),
+            })
+            inserted += 1
+        conn.commit()
+    return jsonify({"imported": inserted})
+
 # --- Application routes ---
 
 @app.route("/api/applications", methods=["GET"])
