@@ -1,7 +1,7 @@
 import os, csv, io
 from functools import wraps
 from datetime import datetime
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 from flask import Flask, request, jsonify, send_file, session
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -22,7 +22,7 @@ def get_db():
         port=url.port or 5432,
         database=url.path.lstrip("/"),
         user=url.username,
-        password=url.password,
+        password=unquote(url.password),
         ssl_context=True
     )
     return conn
