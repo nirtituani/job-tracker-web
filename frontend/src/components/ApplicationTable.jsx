@@ -1,6 +1,20 @@
 import { Search, Filter, Download, Trash2, Edit2 } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 
+const ACTIVE_STATUSES = new Set([
+  'Applied', 'Phone Screen', 'Online Assessment',
+  'Interview Round 1', 'Interview Round 2', 'Interview Round 3',
+  'Final Interview', 'Offer Received',
+]);
+
+function rowColor(status) {
+  if (status === 'Rejected' || status === 'Ghosted' || status === 'Withdrawn')
+    return 'bg-muted/50 hover:bg-muted/70 opacity-60';
+  if (ACTIVE_STATUSES.has(status))
+    return 'bg-green-50 hover:bg-green-100/70';
+  return 'hover:bg-muted/30';
+}
+
 export default function ApplicationTable({ applications, search, setSearch, statusFilter, setStatusFilter, onExport, onEdit, onDelete, statuses }) {
   const STATUSES = ['All', ...statuses];
   return (
@@ -36,7 +50,7 @@ export default function ApplicationTable({ applications, search, setSearch, stat
           {applications.length === 0 ? (
             <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">No applications found</td></tr>
           ) : applications.map(app => (
-            <tr key={app.id} className={`border-b border-border transition-colors ${app.status === 'Rejected' ? 'bg-muted/50 hover:bg-muted/70 opacity-60' : 'hover:bg-muted/30'}`}>
+            <tr key={app.id} className={`border-b border-border transition-colors ${rowColor(app.status)}`}>
               <td className="px-4 py-3 text-sm font-medium">{app.company}</td>
               <td className="px-4 py-3 text-sm text-muted-foreground">{app.title}</td>
               <td className="px-4 py-3"><StatusBadge status={app.status} /></td>
