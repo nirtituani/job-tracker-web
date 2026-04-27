@@ -1,11 +1,11 @@
 import os, csv, io
 from functools import wraps
 from datetime import datetime
+from urllib.parse import urlparse
 from flask import Flask, request, jsonify, send_file, session
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
-import psycopg2
-import psycopg2.extras
+import pg8000.dbapi as pg8000
 
 STATIC_FOLDER = os.path.join(os.path.dirname(__file__), "static")
 
@@ -16,8 +16,27 @@ CORS(app, supports_credentials=True)
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def get_db():
-    conn = psycopg2.connect(DATABASE_URL)
+    url = urlparse(DATABASE_URL)
+    conn = pg8000.connect(
+        host=url.hostname,
+        port=url.port or 5432,
+        database=url.path.lstrip("/"),
+        user=url.username,
+        password=url.password,
+        ssl_context=True
+    )
     return conn
+
+def fetchone_dict(cur):
+    row = cur.fetchone()
+    if row is None:
+        return None
+    cols = [d[0] for d in cur.description]
+    return dict(zip(cols, row))
+
+def fetchall_dict(cur):
+    cols = [d[0] for d in cur.description]
+    return [dict(zip(cols, row)) for row in cur.fetchall()]
 
 def init_db():
     conn = get_db()
@@ -77,9 +96,9 @@ def register():
     if len(password) < 6:
         return jsonify({"error": "Password must be at least 6 characters"}), 400
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    existing = cur.execute("SELECT id FROM users WHERE email=%s", (email,)) or cur.fetchone()
-    if existing:
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM users WHERE email=%s", (email,))
+    if cur.fetchone():
         cur.close(); conn.close()
         return jsonify({"error": "Email already registered"}), 409
     password_hash = generate_password_hash(password)
@@ -88,7 +107,7 @@ def register():
         "INSERT INTO users (email, password_hash, created_at) VALUES (%s, %s, %s) RETURNING id",
         (email, password_hash, now)
     )
-    user_id = cur.fetchone()["id"]
+    user_id = cur.fetchone()[0]
     conn.commit()
     cur.close(); conn.close()
     session["user_id"] = user_id
@@ -101,15 +120,15 @@ def login():
     email = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute("SELECT * FROM users WHERE email=%s", (email,))
-    user = cur.fetchone()
+    cur = conn.cursor()
+    cur.execute("SELECT id, email, password_hash FROM users WHERE email=%s", (email,))
+    row = cur.fetchone()
     cur.close(); conn.close()
-    if not user or not check_password_hash(user["password_hash"], password):
+    if not row or not check_password_hash(row[2], password):
         return jsonify({"error": "Invalid email or password"}), 401
-    session["user_id"] = user["id"]
-    session["email"] = user["email"]
-    return jsonify({"id": user["id"], "email": user["email"]})
+    session["user_id"] = row[0]
+    session["email"] = row[1]
+    return jsonify({"id": row[0], "email": row[1]})
 
 @app.route("/api/auth/logout", methods=["POST"])
 def logout():
@@ -129,7 +148,7 @@ def me():
 def get_applications():
     uid = session["user_id"]
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur = conn.cursor()
     status = request.args.get("status", "")
     search = request.args.get("search", "")
     query = "SELECT * FROM applications WHERE user_id=%s"
@@ -142,9 +161,9 @@ def get_applications():
         params.extend([f"%{search}%"] * 3)
     query += " ORDER BY id DESC"
     cur.execute(query, params)
-    rows = cur.fetchall()
+    rows = fetchall_dict(cur)
     cur.close(); conn.close()
-    return jsonify([dict(r) for r in rows])
+    return jsonify(rows)
 
 @app.route("/api/applications", methods=["POST"])
 @require_login
@@ -217,7 +236,7 @@ def get_stats():
     total = cur.fetchone()[0]
     cur.execute("SELECT COUNT(*) FROM applications WHERE user_id=%s AND status IN ('Applied','Phone Screen','Online Assessment')", (uid,))
     active = cur.fetchone()[0]
-    cur.execute("SELECT COUNT(*) FROM applications WHERE user_id=%s AND status ILIKE '%%Interview%%'", (uid,))
+    cur.execute("SELECT COUNT(*) FROM applications WHERE user_id=%s AND status ILIKE %s", (uid, "%Interview%"))
     interviews = cur.fetchone()[0]
     cur.execute("SELECT COUNT(*) FROM applications WHERE user_id=%s AND status='Rejected'", (uid,))
     rejected = cur.fetchone()[0]
@@ -232,12 +251,11 @@ def export_csv():
     cur = conn.cursor()
     cur.execute("SELECT * FROM applications WHERE user_id=%s ORDER BY id DESC", (uid,))
     rows = cur.fetchall()
+    cols = [d[0] for d in cur.description]
     cur.close(); conn.close()
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["ID", "User ID", "Company", "Job Title", "Location", "Date Applied",
-                     "Status", "Salary Range", "Job Link", "Contact Person",
-                     "Contact Email", "Applied Via", "Match", "Notes", "Last Updated"])
+    writer.writerow(cols)
     for r in rows:
         writer.writerow(list(r))
     output.seek(0)
