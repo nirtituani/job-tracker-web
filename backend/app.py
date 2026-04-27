@@ -7,9 +7,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import psycopg2
 import psycopg2.extras
 
-app = Flask(__name__,
-            static_folder=os.path.join(os.path.dirname(__file__), "static"),
-            static_url_path="")
+STATIC_FOLDER = os.path.join(os.path.dirname(__file__), "static")
+
+app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-in-prod")
 CORS(app, supports_credentials=True)
 
@@ -252,10 +252,10 @@ def export_csv():
 def serve_frontend(path):
     if path.startswith("api/"):
         return jsonify({"error": "Not found"}), 404
-    dist = os.path.join(app.static_folder, path)
-    if path and os.path.exists(dist):
-        return send_file(dist)
-    index = os.path.join(app.static_folder, "index.html")
+    full_path = os.path.join(STATIC_FOLDER, path)
+    if path and os.path.exists(full_path):
+        return send_file(full_path)
+    index = os.path.join(STATIC_FOLDER, "index.html")
     if os.path.exists(index):
         return send_file(index)
     return jsonify({"error": "Frontend not built"}), 404
