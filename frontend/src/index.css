@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Geist', sans-serif;
+  background: #F2F3F0;
+  color: #111111;
+  margin: 0;
+}
