@@ -9,6 +9,7 @@ const DEFAULTS = {
   viaOptions: [
     'Company Website', 'LinkedIn', 'Recruiter', 'Direct Email', 'Referral', 'Headhunter',
   ],
+  statusColors: {},
 };
 
 function load() {
@@ -35,7 +36,8 @@ export function useSettings() {
   };
 
   const removeStatus = (val) => {
-    save({ ...settings, statuses: settings.statuses.filter(s => s !== val) });
+    const { [val]: _, ...rest } = settings.statusColors;
+    save({ ...settings, statuses: settings.statuses.filter(s => s !== val), statusColors: rest });
   };
 
   const addVia = (val) => {
@@ -48,5 +50,9 @@ export function useSettings() {
     save({ ...settings, viaOptions: settings.viaOptions.filter(v => v !== val) });
   };
 
-  return { settings, addStatus, removeStatus, addVia, removeVia };
+  const setStatusColor = (status, color) => {
+    save({ ...settings, statusColors: { ...settings.statusColors, [status]: color } });
+  };
+
+  return { settings, addStatus, removeStatus, addVia, removeVia, setStatusColor };
 }

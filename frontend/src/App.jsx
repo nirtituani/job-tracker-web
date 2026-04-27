@@ -8,6 +8,7 @@ import { getApplications, getStats, addApplication, updateApplication, deleteApp
 import { getMe, getInit, logout as apiLogout } from './api/auth';
 import { useSettings } from './hooks/useSettings';
 import { Plus, X } from 'lucide-react';
+import { COLOR_OPTIONS } from './components/StatusBadge';
 
 function TagList({ label, items, onAdd, onRemove }) {
   const [input, setInput] = useState('');
@@ -41,12 +42,83 @@ function TagList({ label, items, onAdd, onRemove }) {
   );
 }
 
-function SettingsView({ settings, addStatus, removeStatus, addVia, removeVia }) {
+function StatusTagList({ items, colors, onAdd, onRemove, onColorChange }) {
+  const [input, setInput] = useState('');
+  const [pickedColor, setPickedColor] = useState('gray');
+  const submit = () => {
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    onAdd(trimmed);
+    onColorChange(trimmed, pickedColor);
+    setInput('');
+    setPickedColor('gray');
+  };
+  const cycleColor = (item) => {
+    const current = colors[item] || 'gray';
+    const idx = COLOR_OPTIONS.findIndex(c => c.key === current);
+    const next = COLOR_OPTIONS[(idx + 1) % COLOR_OPTIONS.length].key;
+    onColorChange(item, next);
+  };
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-2">Status Options</label>
+      <div className="flex flex-wrap gap-2 mb-3">
+        {items.map(item => {
+          const colorKey = colors[item] || 'gray';
+          const dot = COLOR_OPTIONS.find(c => c.key === colorKey)?.dot || 'bg-gray-400';
+          return (
+            <span key={item} className="flex items-center gap-1.5 px-3 py-1 bg-muted border border-border rounded-full text-sm">
+              <button
+                title="Click to change color"
+                onClick={() => cycleColor(item)}
+                className={`w-3 h-3 rounded-full ${dot} flex-shrink-0 hover:ring-2 hover:ring-offset-1 hover:ring-gray-400 transition-all`}
+              />
+              {item}
+              <button onClick={() => onRemove(item)} className="text-muted-foreground hover:text-red-500 transition-colors">
+                <X size={12} />
+              </button>
+            </span>
+          );
+        })}
+      </div>
+      <div className="space-y-2">
+        <div className="flex gap-1.5 flex-wrap">
+          {COLOR_OPTIONS.map(c => (
+            <button key={c.key} title={c.key}
+              onClick={() => setPickedColor(c.key)}
+              className={`w-5 h-5 rounded-full ${c.dot} transition-all ${pickedColor === c.key ? 'ring-2 ring-offset-1 ring-foreground/40 scale-110' : 'opacity-70 hover:opacity-100'}`}
+            />
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <input
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && submit()}
+            placeholder="Add new status..."
+            className="flex-1 px-4 py-2 bg-background border border-border rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          <button onClick={submit} className="px-4 py-2 bg-primary text-white rounded-full text-sm font-medium hover:bg-primary/90 transition-colors">
+            Add
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SettingsView({ settings, addStatus, removeStatus, addVia, removeVia, setStatusColor }) {
   return (
     <div className="space-y-6 max-w-lg">
       <h1 className="text-2xl font-primary font-bold">Settings</h1>
       <div className="bg-card rounded-xl border border-border p-6 space-y-6">
-        <TagList label="Status Options" items={settings.statuses} onAdd={addStatus} onRemove={removeStatus} />
+        <StatusTagList
+          items={settings.statuses}
+          colors={settings.statusColors}
+          onAdd={addStatus}
+          onRemove={removeStatus}
+          onColorChange={setStatusColor}
+        />
         <div className="border-t border-border" />
         <TagList label="Applied Via Options" items={settings.viaOptions} onAdd={addVia} onRemove={removeVia} />
       </div>
@@ -108,7 +180,7 @@ export default function App() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
   const [activeView, setActiveView] = useState('Dashboard');
-  const { settings, addStatus, removeStatus, addVia, removeVia } = useSettings();
+  const { settings, addStatus, removeStatus, addVia, removeVia, setStatusColor } = useSettings();
 
   useEffect(() => {
     getInit().then(data => {
@@ -167,7 +239,7 @@ export default function App() {
   const renderMain = () => {
     if (activeView === 'Analytics') return <AnalyticsView stats={stats} apps={apps} />;
     if (activeView === 'Settings') return (
-      <SettingsView settings={settings} addStatus={addStatus} removeStatus={removeStatus} addVia={addVia} removeVia={removeVia} />
+      <SettingsView settings={settings} addStatus={addStatus} removeStatus={removeStatus} addVia={addVia} removeVia={removeVia} setStatusColor={setStatusColor} />
     );
     const isDashboard = activeView === 'Dashboard';
     return (
@@ -184,7 +256,7 @@ export default function App() {
           <ApplicationTable applications={apps} search={search} setSearch={setSearch}
             statusFilter={statusFilter} setStatusFilter={setStatusFilter}
             onExport={exportCsv} onEdit={handleEdit} onDelete={handleDelete}
-            statuses={settings.statuses} />
+            statuses={settings.statuses} statusColors={settings.statusColors} />
         </div>
       </>
     );

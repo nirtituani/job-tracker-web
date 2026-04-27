@@ -1,21 +1,28 @@
 import { Search, Filter, Download, Trash2, Edit2 } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 
-const ACTIVE_STATUSES = new Set([
+const BUILTIN_ACTIVE = new Set([
   'Applied', 'Phone Screen', 'Online Assessment',
   'Interview Round 1', 'Interview Round 2', 'Interview Round 3',
   'Final Interview', 'Offer Received',
 ]);
+const BUILTIN_MUTED = new Set(['Rejected', 'Ghosted', 'Withdrawn']);
+const GREEN_COLORS = new Set(['green', 'emerald']);
+const MUTED_COLORS = new Set(['gray', 'red']);
 
-function rowColor(status) {
-  if (status === 'Rejected' || status === 'Ghosted' || status === 'Withdrawn')
-    return 'bg-muted/50 hover:bg-muted/70 opacity-60';
-  if (ACTIVE_STATUSES.has(status))
-    return 'bg-green-50 hover:bg-green-100/70';
+function rowColor(status, statusColors) {
+  const custom = statusColors?.[status];
+  if (custom) {
+    if (GREEN_COLORS.has(custom)) return 'bg-green-50 hover:bg-green-100/70';
+    if (MUTED_COLORS.has(custom)) return 'bg-muted/50 hover:bg-muted/70 opacity-60';
+    return 'hover:bg-muted/30';
+  }
+  if (BUILTIN_MUTED.has(status)) return 'bg-muted/50 hover:bg-muted/70 opacity-60';
+  if (BUILTIN_ACTIVE.has(status)) return 'bg-green-50 hover:bg-green-100/70';
   return 'hover:bg-muted/30';
 }
 
-export default function ApplicationTable({ applications, search, setSearch, statusFilter, setStatusFilter, onExport, onEdit, onDelete, statuses }) {
+export default function ApplicationTable({ applications, search, setSearch, statusFilter, setStatusFilter, onExport, onEdit, onDelete, statuses, statusColors }) {
   const STATUSES = ['All', ...statuses];
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden">
@@ -50,10 +57,12 @@ export default function ApplicationTable({ applications, search, setSearch, stat
           {applications.length === 0 ? (
             <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">No applications found</td></tr>
           ) : applications.map(app => (
-            <tr key={app.id} className={`border-b border-border transition-colors ${rowColor(app.status)}`}>
+            <tr key={app.id} className={`border-b border-border transition-colors ${rowColor(app.status, statusColors)}`}>
               <td className="px-4 py-3 text-sm font-medium">{app.company}</td>
               <td className="px-4 py-3 text-sm text-muted-foreground">{app.title}</td>
-              <td className="px-4 py-3"><StatusBadge status={app.status} /></td>
+              <td className="px-4 py-3">
+                <StatusBadge status={app.status} customColor={statusColors?.[app.status]} />
+              </td>
               <td className="px-4 py-3 text-sm text-muted-foreground">{app.date_applied}</td>
               <td className="px-4 py-3 text-sm text-muted-foreground">{app.match_rating ? `${app.match_rating * 20}%` : '-'}</td>
               <td className="px-4 py-3 text-sm text-muted-foreground">{app.applied_via}</td>
