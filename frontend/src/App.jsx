@@ -106,7 +106,7 @@ function StatusTagList({ items, colors, onAddWithColor, onRemove, onColorChange 
   );
 }
 
-function SettingsView({ settings, addStatus, removeStatus, addVia, removeVia, setStatusColor }) {
+function SettingsView({ settings, addStatusWithColor, removeStatus, addVia, removeVia, setStatusColor }) {
   return (
     <div className="space-y-6 max-w-lg">
       <h1 className="text-2xl font-primary font-bold">Settings</h1>
@@ -238,7 +238,7 @@ export default function App() {
   const renderMain = () => {
     if (activeView === 'Analytics') return <AnalyticsView stats={stats} apps={apps} />;
     if (activeView === 'Settings') return (
-      <SettingsView settings={settings} addStatus={addStatus} removeStatus={removeStatus} addVia={addVia} removeVia={removeVia} setStatusColor={setStatusColor} />
+      <SettingsView settings={settings} addStatusWithColor={addStatusWithColor} removeStatus={removeStatus} addVia={addVia} removeVia={removeVia} setStatusColor={setStatusColor} />
     );
     const isDashboard = activeView === 'Dashboard';
     return (
