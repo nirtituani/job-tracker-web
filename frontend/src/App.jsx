@@ -42,14 +42,13 @@ function TagList({ label, items, onAdd, onRemove }) {
   );
 }
 
-function StatusTagList({ items, colors, onAdd, onRemove, onColorChange }) {
+function StatusTagList({ items, colors, onAddWithColor, onRemove, onColorChange }) {
   const [input, setInput] = useState('');
   const [pickedColor, setPickedColor] = useState('gray');
   const submit = () => {
     const trimmed = input.trim();
     if (!trimmed) return;
-    onAdd(trimmed);
-    onColorChange(trimmed, pickedColor);
+    onAddWithColor(trimmed, pickedColor);
     setInput('');
     setPickedColor('gray');
   };
@@ -115,7 +114,7 @@ function SettingsView({ settings, addStatus, removeStatus, addVia, removeVia, se
         <StatusTagList
           items={settings.statuses}
           colors={settings.statusColors}
-          onAdd={addStatus}
+          onAddWithColor={addStatusWithColor}
           onRemove={removeStatus}
           onColorChange={setStatusColor}
         />
@@ -180,7 +179,7 @@ export default function App() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
   const [activeView, setActiveView] = useState('Dashboard');
-  const { settings, addStatus, removeStatus, addVia, removeVia, setStatusColor } = useSettings();
+  const { settings, addStatus, removeStatus, addVia, removeVia, setStatusColor, addStatusWithColor } = useSettings();
 
   useEffect(() => {
     getInit().then(data => {

@@ -54,5 +54,15 @@ export function useSettings() {
     save({ ...settings, statusColors: { ...settings.statusColors, [status]: color } });
   };
 
-  return { settings, addStatus, removeStatus, addVia, removeVia, setStatusColor };
+  const addStatusWithColor = (val, color) => {
+    const trimmed = val.trim();
+    if (!trimmed || settings.statuses.includes(trimmed)) return;
+    save({
+      ...settings,
+      statuses: [...settings.statuses, trimmed],
+      statusColors: { ...settings.statusColors, [trimmed]: color },
+    });
+  };
+
+  return { settings, addStatus, removeStatus, addVia, removeVia, setStatusColor, addStatusWithColor };
 }
