@@ -235,6 +235,16 @@ export default function App() {
   );
   if (user === null) return <AuthPage onAuth={handleAuth} />;
 
+  const filteredApps = apps.filter(app => {
+    const matchesStatus = statusFilter === 'All' || app.status === statusFilter;
+    const q = search.toLowerCase();
+    const matchesSearch = !q ||
+      (app.company || '').toLowerCase().includes(q) ||
+      (app.title || '').toLowerCase().includes(q) ||
+      (app.location || '').toLowerCase().includes(q);
+    return matchesStatus && matchesSearch;
+  });
+
   const renderMain = () => {
     if (activeView === 'Analytics') return <AnalyticsView stats={stats} apps={apps} />;
     if (activeView === 'Settings') return (
@@ -252,7 +262,7 @@ export default function App() {
         </div>
         <div className="space-y-6">
           {isDashboard && <StatsCards stats={stats} />}
-          <ApplicationTable applications={apps} search={search} setSearch={setSearch}
+          <ApplicationTable applications={filteredApps} search={search} setSearch={setSearch}
             statusFilter={statusFilter} setStatusFilter={setStatusFilter}
             onExport={exportCsv} onEdit={handleEdit} onDelete={handleDelete}
             statuses={settings.statuses} statusColors={settings.statusColors} />
