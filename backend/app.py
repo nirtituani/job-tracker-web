@@ -78,6 +78,10 @@ def init_db():
 
 init_db()
 
+@app.route("/health")
+def health():
+    return jsonify({"ok": True})
+
 # --- Auth helpers ---
 
 def require_login(f):
