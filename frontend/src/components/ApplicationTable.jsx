@@ -1,4 +1,4 @@
-import { Search, Filter, Download, Trash2, Edit2 } from 'lucide-react';
+import { Search, Filter, Download, Trash2, Edit2, FileText } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 
 const BUILTIN_ACTIVE = new Set([
@@ -48,7 +48,7 @@ export default function ApplicationTable({ applications, search, setSearch, stat
       <table className="w-full">
         <thead>
           <tr className="border-b border-border">
-            {['Company', 'Job Title', 'Status', 'Date Applied', 'Match', 'Applied Via', ''].map(h => (
+            {['Company', 'Job Title', 'Status', 'Date Applied', 'Match', 'Applied Via', 'Job Desc', ''].map(h => (
               <th key={h} className="px-4 py-3 text-left text-xs font-primary font-medium text-muted-foreground">{h}</th>
             ))}
           </tr>
@@ -66,6 +66,14 @@ export default function ApplicationTable({ applications, search, setSearch, stat
               <td className="px-4 py-3 text-sm text-muted-foreground">{app.date_applied}</td>
               <td className="px-4 py-3 text-sm text-muted-foreground">{app.match_rating ? `${app.match_rating * 20}%` : '-'}</td>
               <td className="px-4 py-3 text-sm text-muted-foreground">{app.applied_via}</td>
+              <td className="px-4 py-3">
+                {app.job_desc_link
+                  ? <a href={app.job_desc_link} target="_blank" rel="noopener noreferrer"
+                      className="text-primary hover:text-primary/70 transition-colors" title="View job description">
+                      <FileText size={15} />
+                    </a>
+                  : <span className="text-muted-foreground/30"><FileText size={15} /></span>}
+              </td>
               <td className="px-4 py-3">
                 <div className="flex gap-1">
                   <button onClick={() => onEdit(app)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">

@@ -74,6 +74,7 @@ def init_db():
         """))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT"))
         conn.execute(text("ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL"))
+        conn.execute(text("ALTER TABLE applications ADD COLUMN IF NOT EXISTS job_desc_link TEXT DEFAULT ''"))
         conn.commit()
 
 init_db()
@@ -274,10 +275,10 @@ def add_application():
     with engine.connect() as conn:
         result = conn.execute(text("""
             INSERT INTO applications (user_id, company, title, location, date_applied, status,
-            salary_range, job_link, contact_person, contact_email, applied_via,
+            salary_range, job_link, job_desc_link, contact_person, contact_email, applied_via,
             match_rating, notes, last_updated)
             VALUES (:uid, :company, :title, :location, :date_applied, :status,
-            :salary_range, :job_link, :contact_person, :contact_email, :applied_via,
+            :salary_range, :job_link, :job_desc_link, :contact_person, :contact_email, :applied_via,
             :match_rating, :notes, :last_updated)
             RETURNING *
         """), {
@@ -285,8 +286,9 @@ def add_application():
             "company": data.get("company", ""), "title": data.get("title", ""),
             "location": data.get("location", ""), "date_applied": data.get("date_applied", ""),
             "status": data.get("status", "Pre-Applied"), "salary_range": data.get("salary_range", ""),
-            "job_link": data.get("job_link", ""), "contact_person": data.get("contact_person", ""),
-            "contact_email": data.get("contact_email", ""), "applied_via": data.get("applied_via", ""),
+            "job_link": data.get("job_link", ""), "job_desc_link": data.get("job_desc_link", ""),
+            "contact_person": data.get("contact_person", ""), "contact_email": data.get("contact_email", ""),
+            "applied_via": data.get("applied_via", ""),
             "match_rating": data.get("match_rating", 0), "notes": data.get("notes", ""),
             "last_updated": now,
         })
@@ -304,19 +306,19 @@ def update_application(app_id):
         result = conn.execute(text("""
             UPDATE applications SET company=:company, title=:title, location=:location,
             date_applied=:date_applied, status=:status, salary_range=:salary_range,
-            job_link=:job_link, contact_person=:contact_person, contact_email=:contact_email,
-            applied_via=:applied_via, match_rating=:match_rating, notes=:notes,
-            last_updated=:last_updated
+            job_link=:job_link, job_desc_link=:job_desc_link, contact_person=:contact_person,
+            contact_email=:contact_email, applied_via=:applied_via, match_rating=:match_rating,
+            notes=:notes, last_updated=:last_updated
             WHERE id=:id AND user_id=:uid
             RETURNING *
         """), {
             "company": data.get("company"), "title": data.get("title"),
             "location": data.get("location"), "date_applied": data.get("date_applied"),
             "status": data.get("status"), "salary_range": data.get("salary_range"),
-            "job_link": data.get("job_link"), "contact_person": data.get("contact_person"),
-            "contact_email": data.get("contact_email"), "applied_via": data.get("applied_via"),
-            "match_rating": data.get("match_rating"), "notes": data.get("notes"),
-            "last_updated": now, "id": app_id, "uid": uid,
+            "job_link": data.get("job_link"), "job_desc_link": data.get("job_desc_link", ""),
+            "contact_person": data.get("contact_person"), "contact_email": data.get("contact_email"),
+            "applied_via": data.get("applied_via"), "match_rating": data.get("match_rating"),
+            "notes": data.get("notes"), "last_updated": now, "id": app_id, "uid": uid,
         })
         row = dict(result.mappings().first())
         conn.commit()
