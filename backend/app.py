@@ -75,6 +75,7 @@ def init_db():
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT"))
         conn.execute(text("ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL"))
         conn.execute(text("ALTER TABLE applications ADD COLUMN IF NOT EXISTS job_desc_link TEXT DEFAULT ''"))
+        conn.execute(text("ALTER TABLE applications ADD COLUMN IF NOT EXISTS rejected BOOLEAN DEFAULT FALSE"))
         conn.commit()
 
 init_db()
@@ -164,7 +165,7 @@ def init_data():
             "SELECT COUNT(*) FROM applications WHERE user_id=:uid AND status ILIKE :s"
         ), {"uid": uid, "s": "%Interview%"}).scalar()
         rejected = conn.execute(text(
-            "SELECT COUNT(*) FROM applications WHERE user_id=:uid AND status='Rejected'"
+            "SELECT COUNT(*) FROM applications WHERE user_id=:uid AND (rejected IS TRUE OR status='Rejected')"
         ), {"uid": uid}).scalar()
     return jsonify({
         "user": {"id": uid, "email": session["email"]},
@@ -276,10 +277,10 @@ def add_application():
         result = conn.execute(text("""
             INSERT INTO applications (user_id, company, title, location, date_applied, status,
             salary_range, job_link, job_desc_link, contact_person, contact_email, applied_via,
-            match_rating, notes, last_updated)
+            match_rating, notes, last_updated, rejected)
             VALUES (:uid, :company, :title, :location, :date_applied, :status,
             :salary_range, :job_link, :job_desc_link, :contact_person, :contact_email, :applied_via,
-            :match_rating, :notes, :last_updated)
+            :match_rating, :notes, :last_updated, :rejected)
             RETURNING *
         """), {
             "uid": uid,
@@ -290,7 +291,7 @@ def add_application():
             "contact_person": data.get("contact_person", ""), "contact_email": data.get("contact_email", ""),
             "applied_via": data.get("applied_via", ""),
             "match_rating": data.get("match_rating", 0), "notes": data.get("notes", ""),
-            "last_updated": now,
+            "last_updated": now, "rejected": data.get("rejected", False),
         })
         row = dict(result.mappings().first())
         conn.commit()
@@ -308,7 +309,7 @@ def update_application(app_id):
             date_applied=:date_applied, status=:status, salary_range=:salary_range,
             job_link=:job_link, job_desc_link=:job_desc_link, contact_person=:contact_person,
             contact_email=:contact_email, applied_via=:applied_via, match_rating=:match_rating,
-            notes=:notes, last_updated=:last_updated
+            notes=:notes, last_updated=:last_updated, rejected=:rejected
             WHERE id=:id AND user_id=:uid
             RETURNING *
         """), {
@@ -318,7 +319,8 @@ def update_application(app_id):
             "job_link": data.get("job_link"), "job_desc_link": data.get("job_desc_link", ""),
             "contact_person": data.get("contact_person"), "contact_email": data.get("contact_email"),
             "applied_via": data.get("applied_via"), "match_rating": data.get("match_rating"),
-            "notes": data.get("notes"), "last_updated": now, "id": app_id, "uid": uid,
+            "notes": data.get("notes"), "last_updated": now,
+            "rejected": data.get("rejected", False), "id": app_id, "uid": uid,
         })
         row = dict(result.mappings().first())
         conn.commit()
@@ -349,7 +351,7 @@ def get_stats():
             "SELECT COUNT(*) FROM applications WHERE user_id=:uid AND status ILIKE :s"
         ), {"uid": uid, "s": "%Interview%"}).scalar()
         rejected = conn.execute(text(
-            "SELECT COUNT(*) FROM applications WHERE user_id=:uid AND status='Rejected'"
+            "SELECT COUNT(*) FROM applications WHERE user_id=:uid AND (rejected IS TRUE OR status='Rejected')"
         ), {"uid": uid}).scalar()
     return jsonify({"total": total, "active": active, "interviews": interviews, "rejected": rejected})
 

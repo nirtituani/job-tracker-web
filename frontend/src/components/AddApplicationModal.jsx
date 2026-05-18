@@ -9,7 +9,7 @@ export default function AddApplicationModal({ isOpen, onClose, onSave, editData,
     status: statuses[0] || 'Pre-Applied',
     salary_range: '', job_link: '', job_desc_link: '', contact_person: '', contact_email: '',
     applied_via: '',
-    match_rating: 0, notes: '',
+    match_rating: 0, notes: '', rejected: false,
   };
   const [form, setForm] = useState(emptyForm);
   const isEdit = !!editData;
@@ -58,6 +58,14 @@ export default function AddApplicationModal({ isOpen, onClose, onSave, editData,
             <label className="block text-sm font-medium mb-1.5">Notes</label>
             <textarea value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Add any notes..."
               className="w-full px-4 py-3 bg-background border border-border rounded-2xl text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          </div>
+          <div className="col-span-2 flex items-center gap-3">
+            <button type="button"
+              onClick={() => set('rejected', !form.rejected)}
+              className={`relative w-10 h-5 rounded-full transition-colors ${form.rejected ? 'bg-red-400' : 'bg-muted border border-border'}`}>
+              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${form.rejected ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            </button>
+            <span className="text-sm text-muted-foreground">Mark as rejected <span className="text-xs">(keeps the current status)</span></span>
           </div>
         </div>
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-border flex-shrink-0">

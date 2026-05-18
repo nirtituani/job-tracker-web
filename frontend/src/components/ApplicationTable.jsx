@@ -1,4 +1,4 @@
-import { Search, Filter, Download, Trash2, Edit2, FileText } from 'lucide-react';
+import { Search, Filter, Download, Trash2, Edit2, FileText, XCircle, RotateCcw } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 
 const BUILTIN_ACTIVE = new Set([
@@ -6,23 +6,23 @@ const BUILTIN_ACTIVE = new Set([
   'Interview Round 1', 'Interview Round 2', 'Interview Round 3',
   'Final Interview', 'Offer Received',
 ]);
-const BUILTIN_MUTED = new Set(['Rejected', 'Ghosted', 'Withdrawn']);
 const GREEN_COLORS = new Set(['green', 'emerald']);
 const MUTED_COLORS = new Set(['gray', 'red']);
 
-function rowColor(status, statusColors) {
-  const custom = statusColors?.[status];
+function rowColor(app, statusColors) {
+  if (app.rejected || app.status === 'Rejected' || app.status === 'Ghosted' || app.status === 'Withdrawn')
+    return 'bg-muted/50 hover:bg-muted/70 opacity-60';
+  const custom = statusColors?.[app.status];
   if (custom) {
     if (GREEN_COLORS.has(custom)) return 'bg-green-50 hover:bg-green-100/70';
     if (MUTED_COLORS.has(custom)) return 'bg-muted/50 hover:bg-muted/70 opacity-60';
     return 'hover:bg-muted/30';
   }
-  if (BUILTIN_MUTED.has(status)) return 'bg-muted/50 hover:bg-muted/70 opacity-60';
-  if (BUILTIN_ACTIVE.has(status)) return 'bg-green-50 hover:bg-green-100/70';
+  if (BUILTIN_ACTIVE.has(app.status)) return 'bg-green-50 hover:bg-green-100/70';
   return 'hover:bg-muted/30';
 }
 
-export default function ApplicationTable({ applications, search, setSearch, statusFilter, setStatusFilter, onExport, onEdit, onDelete, statuses, statusColors }) {
+export default function ApplicationTable({ applications, search, setSearch, statusFilter, setStatusFilter, onExport, onEdit, onDelete, onToggleReject, statuses, statusColors }) {
   const STATUSES = ['All', ...statuses];
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden">
@@ -55,9 +55,9 @@ export default function ApplicationTable({ applications, search, setSearch, stat
         </thead>
         <tbody>
           {applications.length === 0 ? (
-            <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">No applications found</td></tr>
+            <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">No applications found</td></tr>
           ) : applications.map(app => (
-            <tr key={app.id} className={`border-b border-border transition-colors ${rowColor(app.status, statusColors)}`}>
+            <tr key={app.id} className={`border-b border-border transition-colors ${rowColor(app, statusColors)}`}>
               <td className="px-4 py-3 text-sm font-medium">{app.company}</td>
               <td className="px-4 py-3 text-sm text-muted-foreground">{app.title}</td>
               <td className="px-4 py-3">
@@ -76,10 +76,16 @@ export default function ApplicationTable({ applications, search, setSearch, stat
               </td>
               <td className="px-4 py-3">
                 <div className="flex gap-1">
-                  <button onClick={() => onEdit(app)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+                  <button onClick={() => onEdit(app)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Edit">
                     <Edit2 size={14} />
                   </button>
-                  <button onClick={() => onDelete(app.id)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-muted-foreground hover:text-red-500">
+                  <button
+                    onClick={() => onToggleReject(app)}
+                    title={app.rejected ? 'Undo rejection' : 'Mark as rejected'}
+                    className={`p-1.5 rounded-lg transition-colors ${app.rejected ? 'text-orange-400 hover:bg-orange-50 hover:text-orange-500' : 'text-muted-foreground hover:bg-red-50 hover:text-red-500'}`}>
+                    {app.rejected ? <RotateCcw size={14} /> : <XCircle size={14} />}
+                  </button>
+                  <button onClick={() => onDelete(app.id)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-muted-foreground hover:text-red-500" title="Delete">
                     <Trash2 size={14} />
                   </button>
                 </div>

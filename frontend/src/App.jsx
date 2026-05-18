@@ -215,6 +215,11 @@ export default function App() {
   };
 
   const handleEdit = (app) => { setEditData(app); setModalOpen(true); };
+  const handleToggleReject = async (app) => {
+    const updated = await updateApplication(app.id, { ...app, rejected: !app.rejected });
+    setApps(prev => prev.map(a => a.id === app.id ? updated : a));
+    getStats().then(setStats);
+  };
   const handleDelete = async (id) => {
     if (confirm('Delete this application?')) {
       await deleteApplication(id);
@@ -264,7 +269,7 @@ export default function App() {
           {isDashboard && <StatsCards stats={stats} />}
           <ApplicationTable applications={filteredApps} search={search} setSearch={setSearch}
             statusFilter={statusFilter} setStatusFilter={setStatusFilter}
-            onExport={exportCsv} onEdit={handleEdit} onDelete={handleDelete}
+            onExport={exportCsv} onEdit={handleEdit} onDelete={handleDelete} onToggleReject={handleToggleReject}
             statuses={settings.statuses} statusColors={settings.statusColors} />
         </div>
       </>
