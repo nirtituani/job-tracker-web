@@ -61,7 +61,7 @@ export default function ApplicationTable({ applications, search, setSearch, stat
               <td className="px-4 py-3 text-sm font-medium">{app.company}</td>
               <td className="px-4 py-3 text-sm text-muted-foreground">{app.title}</td>
               <td className="px-4 py-3">
-                <StatusBadge status={app.status} customColor={statusColors?.[app.status]} />
+                <StatusBadge status={app.status} customColor={app.rejected ? 'gray' : statusColors?.[app.status]} />
               </td>
               <td className="px-4 py-3 text-sm text-muted-foreground">{app.date_applied}</td>
               <td className="px-4 py-3 text-sm text-muted-foreground">{app.match_rating ? `${app.match_rating * 20}%` : '-'}</td>

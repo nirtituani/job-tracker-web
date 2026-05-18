@@ -159,7 +159,7 @@ def init_data():
         ).fetchall()]
         total = conn.execute(text("SELECT COUNT(*) FROM applications WHERE user_id=:uid"), {"uid": uid}).scalar()
         active = conn.execute(text(
-            "SELECT COUNT(*) FROM applications WHERE user_id=:uid AND status NOT IN ('Pre-Applied','Rejected','Ghosted','Withdrawn')"
+            "SELECT COUNT(*) FROM applications WHERE user_id=:uid AND status NOT IN ('Pre-Applied','Rejected','Ghosted','Withdrawn') AND (rejected IS NOT TRUE)"
         ), {"uid": uid}).scalar()
         interviews = conn.execute(text(
             "SELECT COUNT(*) FROM applications WHERE user_id=:uid AND status ILIKE :s"
@@ -345,7 +345,7 @@ def get_stats():
     with engine.connect() as conn:
         total = conn.execute(text("SELECT COUNT(*) FROM applications WHERE user_id=:uid"), {"uid": uid}).scalar()
         active = conn.execute(text(
-            "SELECT COUNT(*) FROM applications WHERE user_id=:uid AND status NOT IN ('Pre-Applied','Rejected','Ghosted','Withdrawn')"
+            "SELECT COUNT(*) FROM applications WHERE user_id=:uid AND status NOT IN ('Pre-Applied','Rejected','Ghosted','Withdrawn') AND (rejected IS NOT TRUE)"
         ), {"uid": uid}).scalar()
         interviews = conn.execute(text(
             "SELECT COUNT(*) FROM applications WHERE user_id=:uid AND status ILIKE :s"
