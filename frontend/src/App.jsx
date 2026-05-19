@@ -176,6 +176,7 @@ export default function App() {
   const [stats, setStats] = useState({ total: 0, active: 0, interviews: 0, rejected: 0 });
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [quickFilter, setQuickFilter] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
   const [activeView, setActiveView] = useState('Dashboard');
@@ -240,15 +241,38 @@ export default function App() {
   );
   if (user === null) return <AuthPage onAuth={handleAuth} />;
 
+  const INTERVIEW_STATUSES = new Set(['Interview Round 1','Interview Round 2','Interview Round 3','Final Interview']);
+  const INACTIVE_STATUSES = new Set(['Pre-Applied','Rejected','Ghosted','Withdrawn']);
+
   const filteredApps = apps.filter(app => {
-    const matchesStatus = statusFilter === 'All' || app.status === statusFilter;
     const q = search.toLowerCase();
     const matchesSearch = !q ||
       (app.company || '').toLowerCase().includes(q) ||
       (app.title || '').toLowerCase().includes(q) ||
       (app.location || '').toLowerCase().includes(q);
-    return matchesStatus && matchesSearch;
+    if (!matchesSearch) return false;
+
+    if (quickFilter === 'active')
+      return !app.rejected && !INACTIVE_STATUSES.has(app.status) && !INTERVIEW_STATUSES.has(app.status);
+    if (quickFilter === 'interviews')
+      return !app.rejected && INTERVIEW_STATUSES.has(app.status);
+    if (quickFilter === 'rejected')
+      return app.rejected || app.status === 'Rejected';
+    if (quickFilter === 'total')
+      return true;
+
+    return statusFilter === 'All' || app.status === statusFilter;
   });
+
+  const handleQuickFilter = (key) => {
+    setQuickFilter(prev => prev === key ? null : key);
+    setStatusFilter('All');
+  };
+
+  const handleStatusFilter = (val) => {
+    setStatusFilter(val);
+    setQuickFilter(null);
+  };
 
   const renderMain = () => {
     if (activeView === 'Analytics') return <AnalyticsView stats={stats} apps={apps} />;
@@ -266,9 +290,9 @@ export default function App() {
           </button>
         </div>
         <div className="space-y-6">
-          {isDashboard && <StatsCards stats={stats} />}
+          {isDashboard && <StatsCards stats={stats} activeFilter={quickFilter} onFilter={handleQuickFilter} />}
           <ApplicationTable applications={filteredApps} search={search} setSearch={setSearch}
-            statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+            statusFilter={statusFilter} setStatusFilter={handleStatusFilter}
             onExport={exportCsv} onEdit={handleEdit} onDelete={handleDelete} onToggleReject={handleToggleReject}
             statuses={settings.statuses} statusColors={settings.statusColors} />
         </div>
