@@ -2,7 +2,7 @@
 
 A full-stack web application for tracking job applications — built from scratch and deployed to production.
 
-**Live demo:** [job-tracker-web.onrender.com](https://job-tracker-web.onrender.com)
+**Live demo:** [job-tracker-web.onrender.com](https://job-tracker-web-2.onrender.com/) 
 
 ![JobTracker Dashboard](https://img.shields.io/badge/Status-Live-brightgreen) ![Python](https://img.shields.io/badge/Python-3.11-blue) ![React](https://img.shields.io/badge/React-18-61DAFB) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-3ECF8E)
 
