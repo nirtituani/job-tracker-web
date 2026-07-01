@@ -16,15 +16,18 @@ function CompanyLogo({ company, companyDomain }) {
     ? extractDomain(companyDomain)
     : company.toLowerCase().replace(/\s+/g, '') + '.com';
   const src = `https://img.logo.dev/${domain}?token=${LOGO_TOKEN}&size=40`;
+  const linkedinUrl = `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(company)}`;
   return (
-    <img
-      src={src}
-      alt=""
-      width={20}
-      height={20}
-      className="rounded-sm object-contain shrink-0"
-      onError={e => { e.currentTarget.style.display = 'none'; }}
-    />
+    <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" title={`${company} on LinkedIn`}>
+      <img
+        src={src}
+        alt=""
+        width={20}
+        height={20}
+        className="rounded-sm object-contain shrink-0 hover:opacity-70 transition-opacity"
+        onError={e => { e.currentTarget.style.display = 'none'; }}
+      />
+    </a>
   );
 }
 

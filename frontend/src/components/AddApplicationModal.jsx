@@ -46,7 +46,6 @@ export default function AddApplicationModal({ isOpen, onClose, onSave, editData,
           <Field label="Date Applied" value={form.date_applied} onChange={v => set('date_applied', v)} placeholder="DD/MM/YYYY" />
           <SelectField label="Status" value={form.status} onChange={v => set('status', v)} options={statuses} />
           <Field label="Salary Range" value={form.salary_range} onChange={v => set('salary_range', v)} placeholder="e.g. 30K-40K" />
-          <Field label="Job Link" value={form.job_link} onChange={v => set('job_link', v)} placeholder="https://..." />
           <Field label="Job Description Link" value={form.job_desc_link} onChange={v => set('job_desc_link', v)} placeholder="https://..." />
           <Field label="Company Website (for logo)" value={form.company_domain} onChange={v => set('company_domain', v)} placeholder="https://company.com" />
           <Field label="Contact Person" value={form.contact_person} onChange={v => set('contact_person', v)} placeholder="e.g. Jane Smith" />
