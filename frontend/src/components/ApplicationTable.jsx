@@ -1,6 +1,23 @@
 import { Search, Filter, Download, Trash2, Edit2, FileText, XCircle, RotateCcw } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 
+const LOGO_TOKEN = import.meta.env.VITE_LOGO_DEV_TOKEN;
+
+function CompanyLogo({ company }) {
+  const domain = company.toLowerCase().replace(/\s+/g, '') + '.com';
+  const src = `https://img.logo.dev/${domain}?token=${LOGO_TOKEN}&size=40`;
+  return (
+    <img
+      src={src}
+      alt=""
+      width={20}
+      height={20}
+      className="rounded-sm object-contain shrink-0"
+      onError={e => { e.currentTarget.style.display = 'none'; }}
+    />
+  );
+}
+
 const BUILTIN_ACTIVE = new Set([
   'Applied', 'Phone Screen', 'Online Assessment',
   'Interview Round 1', 'Interview Round 2', 'Interview Round 3',
@@ -58,7 +75,12 @@ export default function ApplicationTable({ applications, search, setSearch, stat
             <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">No applications found</td></tr>
           ) : applications.map(app => (
             <tr key={app.id} className={`border-b border-border transition-colors ${rowColor(app, statusColors)}`}>
-              <td className="px-4 py-3 text-sm font-medium">{app.company}</td>
+              <td className="px-4 py-3 text-sm font-medium">
+                <div className="flex items-center gap-2">
+                  <CompanyLogo company={app.company} />
+                  {app.company}
+                </div>
+              </td>
               <td className="px-4 py-3 text-sm text-muted-foreground">{app.title}</td>
               <td className="px-4 py-3">
                 <StatusBadge status={app.status} customColor={app.rejected ? 'gray' : statusColors?.[app.status]} />
