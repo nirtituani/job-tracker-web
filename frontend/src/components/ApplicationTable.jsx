@@ -1,7 +1,7 @@
 import { Search, Filter, Download, Trash2, Edit2, FileText, XCircle, RotateCcw } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 
-const LOGO_TOKEN = import.meta.env.VITE_LOGO_DEV_TOKEN;
+const LOGO_TOKEN = 'pk_GTtSP_6oQX2z_BE9iZsCUw';
 
 function CompanyLogo({ company }) {
   const domain = company.toLowerCase().replace(/\s+/g, '') + '.com';
