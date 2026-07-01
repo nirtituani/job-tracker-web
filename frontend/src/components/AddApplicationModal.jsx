@@ -8,7 +8,7 @@ export default function AddApplicationModal({ isOpen, onClose, onSave, editData,
     company: '', title: '', location: '', date_applied: today,
     status: statuses[0] || 'Pre-Applied',
     salary_range: '', job_link: '', job_desc_link: '', contact_person: '', contact_email: '',
-    applied_via: '',
+    applied_via: '', company_domain: '',
     match_rating: 0, notes: '', rejected: false,
   };
   const [form, setForm] = useState(emptyForm);
@@ -48,6 +48,7 @@ export default function AddApplicationModal({ isOpen, onClose, onSave, editData,
           <Field label="Salary Range" value={form.salary_range} onChange={v => set('salary_range', v)} placeholder="e.g. 30K-40K" />
           <Field label="Job Link" value={form.job_link} onChange={v => set('job_link', v)} placeholder="https://..." />
           <Field label="Job Description Link" value={form.job_desc_link} onChange={v => set('job_desc_link', v)} placeholder="https://..." />
+          <Field label="Company Website (for logo)" value={form.company_domain} onChange={v => set('company_domain', v)} placeholder="https://company.com" />
           <Field label="Contact Person" value={form.contact_person} onChange={v => set('contact_person', v)} placeholder="e.g. Jane Smith" />
           <Field label="Contact Email" value={form.contact_email} onChange={v => set('contact_email', v)} placeholder="email@company.com" />
           <SelectField label="Applied Via" value={form.applied_via} onChange={v => set('applied_via', v)} options={['', ...viaOptions]} labels={['Select...', ...viaOptions]} />

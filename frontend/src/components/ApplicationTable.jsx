@@ -3,8 +3,18 @@ import StatusBadge from './StatusBadge';
 
 const LOGO_TOKEN = 'pk_GTtSP_6oQX2z_BE9iZsCUw';
 
-function CompanyLogo({ company }) {
-  const domain = company.toLowerCase().replace(/\s+/g, '') + '.com';
+function extractDomain(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+  }
+}
+
+function CompanyLogo({ company, companyDomain }) {
+  const domain = companyDomain
+    ? extractDomain(companyDomain)
+    : company.toLowerCase().replace(/\s+/g, '') + '.com';
   const src = `https://img.logo.dev/${domain}?token=${LOGO_TOKEN}&size=40`;
   return (
     <img
@@ -77,7 +87,7 @@ export default function ApplicationTable({ applications, search, setSearch, stat
             <tr key={app.id} className={`border-b border-border transition-colors ${rowColor(app, statusColors)}`}>
               <td className="px-4 py-3 text-sm font-medium">
                 <div className="flex items-center gap-2">
-                  <CompanyLogo company={app.company} />
+                  <CompanyLogo company={app.company} companyDomain={app.company_domain} />
                   {app.company}
                 </div>
               </td>

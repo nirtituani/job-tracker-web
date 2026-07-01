@@ -76,6 +76,7 @@ def init_db():
         conn.execute(text("ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL"))
         conn.execute(text("ALTER TABLE applications ADD COLUMN IF NOT EXISTS job_desc_link TEXT DEFAULT ''"))
         conn.execute(text("ALTER TABLE applications ADD COLUMN IF NOT EXISTS rejected BOOLEAN DEFAULT FALSE"))
+        conn.execute(text("ALTER TABLE applications ADD COLUMN IF NOT EXISTS company_domain TEXT DEFAULT ''"))
         conn.commit()
 
 init_db()
@@ -277,10 +278,10 @@ def add_application():
         result = conn.execute(text("""
             INSERT INTO applications (user_id, company, title, location, date_applied, status,
             salary_range, job_link, job_desc_link, contact_person, contact_email, applied_via,
-            match_rating, notes, last_updated, rejected)
+            match_rating, notes, last_updated, rejected, company_domain)
             VALUES (:uid, :company, :title, :location, :date_applied, :status,
             :salary_range, :job_link, :job_desc_link, :contact_person, :contact_email, :applied_via,
-            :match_rating, :notes, :last_updated, :rejected)
+            :match_rating, :notes, :last_updated, :rejected, :company_domain)
             RETURNING *
         """), {
             "uid": uid,
@@ -292,6 +293,7 @@ def add_application():
             "applied_via": data.get("applied_via", ""),
             "match_rating": data.get("match_rating", 0), "notes": data.get("notes", ""),
             "last_updated": now, "rejected": data.get("rejected", False),
+            "company_domain": data.get("company_domain", ""),
         })
         row = dict(result.mappings().first())
         conn.commit()
@@ -309,7 +311,7 @@ def update_application(app_id):
             date_applied=:date_applied, status=:status, salary_range=:salary_range,
             job_link=:job_link, job_desc_link=:job_desc_link, contact_person=:contact_person,
             contact_email=:contact_email, applied_via=:applied_via, match_rating=:match_rating,
-            notes=:notes, last_updated=:last_updated, rejected=:rejected
+            notes=:notes, last_updated=:last_updated, rejected=:rejected, company_domain=:company_domain
             WHERE id=:id AND user_id=:uid
             RETURNING *
         """), {
@@ -320,7 +322,8 @@ def update_application(app_id):
             "contact_person": data.get("contact_person"), "contact_email": data.get("contact_email"),
             "applied_via": data.get("applied_via"), "match_rating": data.get("match_rating"),
             "notes": data.get("notes"), "last_updated": now,
-            "rejected": data.get("rejected", False), "id": app_id, "uid": uid,
+            "rejected": data.get("rejected", False), "company_domain": data.get("company_domain", ""),
+            "id": app_id, "uid": uid,
         })
         row = dict(result.mappings().first())
         conn.commit()
